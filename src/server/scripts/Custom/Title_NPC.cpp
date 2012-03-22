@@ -15,7 +15,7 @@
 enum enums
 {
 	//Token ID!
-	TITLE_TOKEN = 1337, //Change me pl0x
+	TITLE_TOKEN = 37829, //Change me pl0x
 	//Cost for title!
 	TITLE_1 = 50, //Change me pl0x
 	TITLE_2 = 100, //Change me pl0x
