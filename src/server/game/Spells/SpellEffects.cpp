@@ -8768,7 +8768,7 @@ void Spell::EffectCastButtons(SpellEffIndex effIndex)
          m_caster->CastSpell(unitTarget, spell_id, true);
 
          m_caster->ModifyPower(POWER_MANA, -(int32)cost);
-         p_caster->AddSpellAndCategoryCooldowns(spellInfo, 0)
+         p_caster->AddSpellAndCategoryCooldowns(spellInfo, 0);
      }
 }
 
