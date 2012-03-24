@@ -1352,12 +1352,17 @@ void AddBattlegroundScripts() {
 
 #ifdef SCRIPTS
 /* This is where custom scripts' loading functions should be declared. */
-
+void AddSC_Gossip_CheckCombat();
+void AddSC_Npc_Beastmaster();
+void AddSC_Title_NPC();
 #endif
 
 void AddCustomScripts() {
 #ifdef SCRIPTS
     /* This is where custom scripts should be added. */
-
+    AddSC_Gossip_CheckCombat();
+    AddSC_Npc_Beastmaster();
+    AddSC_Npc_Beastmaster();
+	AddSC_Title_NPC();
 #endif
 }
