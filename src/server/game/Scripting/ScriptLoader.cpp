@@ -1362,7 +1362,6 @@ void AddCustomScripts() {
     /* This is where custom scripts should be added. */
     AddSC_Gossip_CheckCombat();
     AddSC_Npc_Beastmaster();
-    AddSC_Npc_Beastmaster();
-	AddSC_Title_NPC();
+    AddSC_Title_NPC();
 #endif
 }
