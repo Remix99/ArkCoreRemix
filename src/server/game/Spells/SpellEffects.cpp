@@ -589,6 +589,7 @@ void Spell::SpellDamageSchoolDmg(SpellEffIndex effIndex)
         else if (m_spellInfo->SpellFamilyFlags[1] & 0x100)
         {
           damage = uint32(m_caster->GetTotalAttackPowerValue(BASE_ATTACK) * 45/100
+                    m_caster->RemoveAurasDueToSpell(32216); // Victorious
                 }
                 // Heroic Leap
                 else if (m_spellInfo->Id == 52174)
@@ -617,8 +618,7 @@ void Spell::SpellDamageSchoolDmg(SpellEffIndex effIndex)
             damage += uint32(ap * 0.874 * 100 / 100 - 1);
             m_caster->SetPower(POWER_RAGE, 0 + bonus_rage);
                     }
-                +        }
-
+        }
         // Heroic Strike
         else if (m_spellInfo->Id == 78)
           damage = uint32(8 + m_caster->GetTotalAttackPowerValue(BASE_ATTACK) * 60/100);
