@@ -3185,3 +3185,14 @@ AuctionHouseBot.DisableTGsBelowReqSkillRank = 0
 AuctionHouseBot.DisableTGsAboveReqSkillRank = 0
 
 ###################################################################################################
+
+#   Duel.Zone
+#                         Description: Resets the stats of the player in that zone after the duel
+#                         Default:  NULL  - (Disabled)
+#                                                  ZoneID  - (Enabled for ZoneID)
+#
+#
+Duel.Zone1 =
+Duel.Zone2 =
+Duel.Zone3 =
+Duel.Zone4 =
