@@ -8719,16 +8719,25 @@ void Spell::EffectCastButtons(SpellEffIndex effIndex)
 
         if (p_caster->HasSpellCooldown(spell_id)) continue;
 
-        SpellEntry const *spellInfo = sSpellStore.LookupEntry(spell_id);
-        uint32 cost = CalculatePowerCost(spellInfo, m_caster,
-                GetSpellSchoolMask(spellInfo));
+         SpellEntry const *spellInfo = sSpellStore.LookupEntry(spell_id);
+        if (!spellInfo)
+            continue;
+        uint32 cost = CalculatePowerCost(spellInfo, m_caster, GetSpellSchoolMask(spellInfo));
 
-        if (m_caster->GetPower(POWER_MANA) < cost) break;
+        if (m_caster->GetPower(POWER_MANA) < cost)
+            break;
+  
+    if (!m_caster->HasSpell(spell_id) || IsPassiveSpell(spellInfo))
+            continue;
 
-        m_caster->CastSpell(unitTarget, spell_id, true);
-        m_caster->ModifyPower(POWER_MANA, -(int32) cost);
-        p_caster->AddSpellAndCategoryCooldowns(spellInfo, 0);
-    }
+        if (spellInfo->TotemCategory[0] < 2 || spellInfo->TotemCategory[0] > 5)
+            continue; 
+
+         m_caster->CastSpell(unitTarget, spell_id, true);
+
+         m_caster->ModifyPower(POWER_MANA, -(int32)cost);
+         p_caster->AddSpellAndCategoryCooldowns(spellInfo, 0);
+     }
 }
 
 void Spell::EffectRechargeManaGem(SpellEffIndex /*effIndex*/)
