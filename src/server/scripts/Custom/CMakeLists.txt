@@ -3,7 +3,6 @@ set(scripts_STAT_SRCS
     Custom/Gossip_CheckCombat.cpp
     Custom/Npc_Beastmaster.cpp
     Custom/Title_NPC.cpp
-    Custom/Reset_OnDuelEnd.cpp
 )
 
 message("  -> Prepared: Custom")

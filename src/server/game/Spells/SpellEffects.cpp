@@ -583,12 +583,12 @@ void Spell::SpellDamageSchoolDmg(SpellEffIndex effIndex)
                 // Bloodthirst
                 if (m_spellInfo->SpellFamilyFlags [1] & 0x400)
                 {
-          damage = uint32(m_caster->GetTotalAttackPowerValue(BASE_ATTACK) * 80/100);
+          damage = uint32(m_caster->GetTotalAttackPowerValue(BASE_ATTACK) * 50/100);
                 }
                 // Victory Rush
         else if (m_spellInfo->SpellFamilyFlags[1] & 0x100)
         {
-          damage = uint32(m_caster->GetTotalAttackPowerValue(BASE_ATTACK) * 45/100);
+          damage = uint32(m_caster->GetTotalAttackPowerValue(BASE_ATTACK) * 45/100); 
                     m_caster->RemoveAurasDueToSpell(32216); // Victorious
                 }
                 // Heroic Leap
@@ -8719,25 +8719,16 @@ void Spell::EffectCastButtons(SpellEffIndex effIndex)
 
         if (p_caster->HasSpellCooldown(spell_id)) continue;
 
-         SpellEntry const *spellInfo = sSpellStore.LookupEntry(spell_id);
-        if (!spellInfo)
-            continue;
-        uint32 cost = CalculatePowerCost(spellInfo, m_caster, GetSpellSchoolMask(spellInfo));
+        SpellEntry const *spellInfo = sSpellStore.LookupEntry(spell_id);
+        uint32 cost = CalculatePowerCost(spellInfo, m_caster,
+                GetSpellSchoolMask(spellInfo));
 
-        if (m_caster->GetPower(POWER_MANA) < cost)
-            break;
-  
-    if (!m_caster->HasSpell(spell_id) || IsPassiveSpell(spellInfo))
-            continue;
+        if (m_caster->GetPower(POWER_MANA) < cost) break;
 
-        if (spellInfo->TotemCategory[0] < 2 || spellInfo->TotemCategory[0] > 5)
-            continue; 
-
-         m_caster->CastSpell(unitTarget, spell_id, true);
-
-         m_caster->ModifyPower(POWER_MANA, -(int32)cost);
-         p_caster->AddSpellAndCategoryCooldowns(spellInfo, 0);
-     }
+        m_caster->CastSpell(unitTarget, spell_id, true);
+        m_caster->ModifyPower(POWER_MANA, -(int32) cost);
+        p_caster->AddSpellAndCategoryCooldowns(spellInfo, 0);
+    }
 }
 
 void Spell::EffectRechargeManaGem(SpellEffIndex /*effIndex*/)
