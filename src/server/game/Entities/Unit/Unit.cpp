@@ -228,7 +228,6 @@ Unit::~Unit()
     _DeleteRemovedAuras();
 
     delete m_charmInfo;
-    delete m_vehicleKit;
 
     ASSERT(!m_duringRemoveFromWorld);
     ASSERT(!m_attacking);
@@ -9635,10 +9634,14 @@ bool Unit::HandleProcTriggerSpell(Unit *pVictim, uint32 damage,
             if (!HealthBelowPct(35)) return false;
             break;
         }
-            // Sacred Shield
+        // Sacred Shield
         case 85285:
         {
-            if (!HealthBelowPct(30)) return false;
+            if (!HealthBelowPctDamaged(30, damage))
+                return false;
+
+            int32 ap = int32(GetTotalAttackPowerValue(BASE_ATTACK) * 0.9f);
+            basepoints0 = int32(CalculatePctN(ap, 280));
             break;
         }
             // Improved Hamstring
@@ -14354,6 +14357,7 @@ void Unit::setDeathState(DeathState s)
 
         if (IsNonMeleeSpellCasted(false)) InterruptNonMeleeSpells(false);
 
+        ExitVehicle();
         UnsummonAllTotems();
         RemoveAllControlled();
         RemoveAllAurasOnDeath();
@@ -15491,7 +15495,12 @@ void Unit::RemoveFromWorld()
     if (IsInWorld())
     {
         m_duringRemoveFromWorld = true;
-        if (IsVehicle()) GetVehicleKit()->Uninstall();
+        if (IsVehicle())
+        {
+            GetVehicleKit()->Uninstall();
+            delete m_vehicleKit;
+            m_vehicleKit = NULL;
+         }
 
         RemoveCharmAuras();
         RemoveBindSightAuras();
