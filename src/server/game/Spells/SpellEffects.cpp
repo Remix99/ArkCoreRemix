@@ -8406,7 +8406,7 @@ void Spell::EffectCastButtons (SpellEffIndex effIndex)
 
          m_caster->ModifyPower(POWER_MANA, -(int32)cost);
          p_caster->AddSpellAndCategoryCooldowns(spellInfo, 0);
-     
+    }
 }
 
 void Spell::EffectRechargeManaGem (SpellEffIndex /*effIndex*/)
