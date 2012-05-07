@@ -24,27 +24,28 @@
 
 enum Spells
 {
-    SPELL_BERSERK = 47008,
-    SPELL_CONSUMING_DARKNESS = 88954,
-    SPELL_METEOR_SLASH = 88942,
-    SPELL_FEL_FIRESTORM = 88972,
+    SPELL_BERSERK = 47008, SPELL_CONSUMING_DARKNESS = 88954, SPELL_METEOR_SLASH = 88942, SPELL_FEL_FIRESTORM = 88972,
 };
 
 enum Events
 {
-    EVENT_BERSERK = 1,
-    EVENT_CONSUMING_DARKNESS,
-    EVENT_METEOR_SLASH,
+    EVENT_BERSERK = 1, EVENT_CONSUMING_DARKNESS, EVENT_METEOR_SLASH,EVENT_FLAME_DESPAWN,
 };
 
 class boss_argaloth: public CreatureScript
 {
-    public:
-        boss_argaloth() : CreatureScript("boss_argaloth") { }
+public:
+    boss_argaloth () :
+            CreatureScript("boss_argaloth")
+    {
+    }
 
     struct boss_argalothAI: public BossAI
     {
-        boss_argalothAI(Creature* creature) : BossAI(creature, DATA_ARGALOTH) { }
+        boss_argalothAI (Creature* creature) :
+                BossAI(creature, DATA_ARGALOTH)
+        {
+        }
 
         uint32 fel_firestorm_casted;
 
@@ -52,13 +53,14 @@ class boss_argaloth: public CreatureScript
         {
             _Reset();
             me->RemoveAurasDueToSpell(SPELL_BERSERK);
-            events.ScheduleEvent(EVENT_BERSERK, 300 *IN_MILLISECONDS);
-            events.ScheduleEvent(EVENT_CONSUMING_DARKNESS, 14 *IN_MILLISECONDS);
-            events.ScheduleEvent(EVENT_METEOR_SLASH, 10 *IN_MILLISECONDS);
+            events.ScheduleEvent(EVENT_BERSERK, 300000);
+            events.ScheduleEvent(EVENT_CONSUMING_DARKNESS, urand(14000, 16000));
+            events.ScheduleEvent(EVENT_METEOR_SLASH, urand(16000, 18000));
             fel_firestorm_casted = 0;
+            summons.DespawnAll();
         }
 
-        void UpdateAI(const uint32 diff)
+        void UpdateAI (const uint32 diff)
         {
             if (!UpdateVictim())
                 return;
@@ -66,32 +68,37 @@ class boss_argaloth: public CreatureScript
             if (me->GetHealthPct() < 66 && fel_firestorm_casted == 0)
             {
                 DoCast(SPELL_FEL_FIRESTORM);
-                events.DelayEvents(3 *IN_MILLISECONDS);
+                events.DelayEvents(3000);
                 fel_firestorm_casted = 1;
+                events.ScheduleEvent(EVENT_FLAME_DESPAWN, 5000);
             }
             if (me->GetHealthPct() < 33 && fel_firestorm_casted == 1)
             {
                 DoCast(SPELL_FEL_FIRESTORM);
-                events.DelayEvents(3 *IN_MILLISECONDS);
+                events.DelayEvents(3000);
                 fel_firestorm_casted = 2;
+                events.ScheduleEvent(EVENT_FLAME_DESPAWN, 5000);
             }
 
             events.Update(diff);
 
             if (me->HasUnitState(UNIT_STAT_CASTING))
-                    return;
+                return;
 
             while (uint32 eventId = events.ExecuteEvent())
             {
                 switch (eventId)
                 {
-                case EVENT_CONSUMING_DARKNESS:
-                    DoCast(SPELL_CONSUMING_DARKNESS);
-                    events.RescheduleEvent(EVENT_CONSUMING_DARKNESS, 22 *IN_MILLISECONDS);
-                    break;
+                  case EVENT_CONSUMING_DARKNESS:
+                        for (uint8 i = 0; i < RAID_MODE(3, 8); i++)
+                            if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100.0f, true, -SPELL_CONSUMING_DARKNESS))
+                                me->CastSpell(target, SPELL_CONSUMING_DARKNESS, true);
+
+                        events.RescheduleEvent(EVENT_CONSUMING_DARKNESS, urand(24000, 26000));
+                        break;
                 case EVENT_METEOR_SLASH:
                     DoCast(SPELL_METEOR_SLASH);
-                    events.RescheduleEvent(EVENT_METEOR_SLASH, 15 *IN_MILLISECONDS);
+                    events.RescheduleEvent(EVENT_METEOR_SLASH, 15 * IN_MILLISECONDS);
                     break;
                 case EVENT_BERSERK:
                     DoCast(me, SPELL_BERSERK);
@@ -101,15 +108,15 @@ class boss_argaloth: public CreatureScript
 
             DoMeleeAttackIfReady();
         }
-     };
+    };
 
-    CreatureAI* GetAI(Creature* creature) const
+    CreatureAI* GetAI (Creature* creature) const
     {
         return new boss_argalothAI(creature);
     }
 };
 
-void AddSC_boss_argaloth()
+void AddSC_boss_argaloth ()
 {
     new boss_argaloth();
 }

@@ -684,21 +684,24 @@ public:
 
 enum eKarynaku
 {
-    QUEST_ALLY_OF_NETHER    = 10870,
-
-    TAXI_PATH_ID            = 649
+    QUEST_ALLY_OF_NETHER      = 10870,
+    QUEST_ZULUHED_THE_WACKED  = 10866,
+ 
+    NPC_ZULUHED_THE_WACKED    = 11980,
+    TAXI_PATH_ID              = 649
 };
-
+ 
 class npc_karynaku : public CreatureScript
 {
 public:
     npc_karynaku() : CreatureScript("npc_karynaku") { }
-
-    bool OnQuestAccept(Player* pPlayer, Creature* /*pCreature*/, Quest const* quest)
+ 
+    bool OnQuestAccept(Player* pPlayer, Creature* pCreature, Quest const* quest)
     {
         if (quest->GetQuestId() == QUEST_ALLY_OF_NETHER)
             pPlayer->ActivateTaxiPathTo(TAXI_PATH_ID);        //pPlayer->ActivateTaxiPathTo(649);
-
+        if (quest->GetQuestId() == QUEST_ZULUHED_THE_WACKED)
+            pCreature->SummonCreature(NPC_ZULUHED_THE_WACKED, -4204.94f, 316.397f, 122.508f, 1.309f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 300000);
         return true;
     }
 };
@@ -817,7 +820,7 @@ public:
                 return 0;
             }
 
-            switch(Step)
+            switch (Step)
             {
             case 0: return 0; break;
             case 1: me->GetMotionMaster()->MovePoint(0, -5104.41f, 595.297f, 85.6838f); return 9000; break;
@@ -995,7 +998,7 @@ public:
             if (!pPlayer)
                 return;
 
-            switch(uiPointId)
+            switch (uiPointId)
             {
                 case 13:
                     DoScriptText(SAY_WIL_PROGRESS1, me, pPlayer);
@@ -1259,7 +1262,7 @@ public:
 
             AnimationTimer = TorlothAnim[AnimationCount].Timer;
 
-            switch(AnimationCount)
+            switch (AnimationCount)
             {
             case 0:
                 me->SetUInt32Value(UNIT_FIELD_BYTES_1, 8);
@@ -1338,7 +1341,7 @@ public:
         void JustDied(Unit* slayer)
         {
             if (slayer)
-                switch(slayer->GetTypeId())
+                switch (slayer->GetTypeId())
                 {
                     case TYPEID_UNIT:
                         if (Unit *owner = slayer->GetOwner())
@@ -1788,7 +1791,7 @@ public:
             uint32 entry = 0;
             uint32 credit = 0;
 
-            switch(me->GetEntry()) {
+            switch (me->GetEntry()) {
               case ENTRY_ENRAGED_FIRE_SPIRIT:
                 entry  = ENTRY_FIERY_SOUL;
                 //credit = SPELL_FIERY_SOUL_CAPTURED_CREDIT;
