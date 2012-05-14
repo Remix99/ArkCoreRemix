@@ -55,6 +55,7 @@
 #include "LFGMgr.h"
 #include "GameObjectAI.h"
 #include "Group.h"
+#include "Guild.h"
 
 void WorldSession::HandleRepopRequestOpcode (WorldPacket & recv_data)
 {
@@ -176,45 +177,44 @@ void WorldSession::HandleWhoOpcode (WorldPacket & recv_data)
     sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: Recvd CMSG_WHO Message");
     //recv_data.hexlike();
 
-            uint32 matchcount = 0;
-
-            uint32 level_min, level_max, racemask, classmask, zones_count, str_count;
-    uint32 zoneids[10];          // 10 is client limit
+    uint32 matchcount = 0;
+    uint32 level_min, level_max, racemask, classmask, zones_count, str_count;
+    uint32 zoneids[10];                     // 10 is client limit
     std::string player_name, guild_name;
 
-    recv_data >> level_min;// maximal player level, default 0
-    recv_data >> level_max;// minimal player level, default 100 (MAX_LEVEL)
-    recv_data >> player_name;// player name, case sensitive...
+    recv_data >> level_min;                 // maximal player level, default 0
+    recv_data >> level_max;                 // minimal player level, default 100 (MAX_LEVEL)
+    recv_data >> player_name;               // player name, case sensitive...
 
-    recv_data >> guild_name;// guild name, case sensitive...
+    recv_data >> guild_name;                // guild name, case sensitive...
 
-    recv_data >> racemask;// race mask
-    recv_data >> classmask;// class mask
-    recv_data >> zones_count;// zones count, client limit = 10 (2.0.10)
+    recv_data >> racemask;                  // race mask
+    recv_data >> classmask;                 // class mask
+    recv_data >> zones_count;               // zones count, client limit = 10 (2.0.10)
 
     if (zones_count > 10)
-    return;// can't be received from real client or broken packet
+    return;                                 // can't be received from real client or broken packet
 
     for (uint32 i = 0; i < zones_count; ++i)
     {
         uint32 temp;
-        recv_data >> temp;          // zone id, 0 if zone is unknown...
+        recv_data >> temp;                  // zone id, 0 if zone is unknown...
         zoneids[i] = temp;
         sLog->outDebug(LOG_FILTER_NETWORKIO, "Zone %u: %u", i, zoneids[i]);
     }
 
-    recv_data >> str_count;          // user entered strings count, client limit=4 (checked on 2.0.10)
+    recv_data >> str_count;                 // user entered strings count, client limit=4 (checked on 2.0.10)
 
     if (str_count > 4)
-    return;// can't be received from real client or broken packet
+    return;                                 // can't be received from real client or broken packet
 
     sLog->outDebug(LOG_FILTER_NETWORKIO, "Minlvl %u, maxlvl %u, name %s, guild %s, racemask %u, classmask %u, zones %u, strings %u", level_min, level_max, player_name.c_str(), guild_name.c_str(), racemask, classmask, zones_count, str_count);
 
-    std::wstring str[4];// 4 is client limit
+    std::wstring str[4];                    // 4 is client limit
     for (uint32 i = 0; i < str_count; ++i)
     {
         std::string temp;
-        recv_data >> temp;          // user entered string, it used as universal search pattern(guild+player name)?
+        recv_data >> temp;                  // user entered string, it used as universal search pattern(guild+player name)?
 
         if (!Utf8toWStr(temp, str[i]))
         continue;
@@ -226,8 +226,10 @@ void WorldSession::HandleWhoOpcode (WorldPacket & recv_data)
 
     std::wstring wplayer_name;
     std::wstring wguild_name;
+
     if (!(Utf8toWStr(player_name, wplayer_name) && Utf8toWStr(guild_name, wguild_name)))
     return;
+
     wstrToLower(wplayer_name);
     wstrToLower(wguild_name);
 
@@ -242,9 +244,9 @@ void WorldSession::HandleWhoOpcode (WorldPacket & recv_data)
     uint32 gmLevelInWhoList = sWorld->getIntConfig(CONFIG_GM_LEVEL_IN_WHO_LIST);
     uint32 displaycount = 0;
 
-    WorldPacket data(SMSG_WHO, 50);// guess size
-    data << uint32(matchcount);// placeholder, count of players matching criteria
-    data << uint32(displaycount);// placeholder, count of players displayed
+    WorldPacket data(SMSG_WHO, 50);     // guess size
+    data << uint32(matchcount);         // placeholder, count of players matching criteria
+    data << uint32(displaycount);       // placeholder, count of players displayed
 
     ACE_GUARD(ACE_Thread_Mutex, g, *HashMapHolder<Player>::GetLock());
     HashMapHolder<Player>::MapType& m = sObjectAccessor->GetPlayers();
@@ -396,6 +398,7 @@ void WorldSession::HandleLogoutRequestOpcode (WorldPacket & /*recv_data*/)
         WorldPacket data(SMSG_LOGOUT_RESPONSE, 1 + 4);
         data << uint8(0);
         data << uint32(16777216);
+
         SendPacket(&data);
         LogoutPlayer(true);
         return;
@@ -409,6 +412,7 @@ void WorldSession::HandleLogoutRequestOpcode (WorldPacket & /*recv_data*/)
         WorldPacket data(SMSG_FORCE_MOVE_ROOT, (8 + 4));          // guess size
         data.append(GetPlayer()->GetPackGUID());
         data << (uint32) 2;
+
         SendPacket(&data);
         GetPlayer()->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
     }
@@ -416,6 +420,7 @@ void WorldSession::HandleLogoutRequestOpcode (WorldPacket & /*recv_data*/)
     WorldPacket data(SMSG_LOGOUT_RESPONSE, 1 + 4);
     data << uint8(0);
     data << uint32(0);
+
     SendPacket(&data);
     LogoutRequest (time (NULL));}
 
@@ -491,8 +496,7 @@ void WorldSession::HandleZoneUpdateOpcode (WorldPacket & recv_data)
     sLog->outDetail("WORLD: Recvd ZONE_UPDATE: %u", newZone);
 
     // use server size data
-            uint32 newzone, newarea
-    ;
+    uint32 newzone, newarea;
     GetPlayer()->GetZoneAndAreaId(newzone, newarea);
     GetPlayer()->UpdateZone(newzone, newarea);
     //GetPlayer()->SendInitWorldStates(true, newZone);
@@ -544,6 +548,7 @@ void WorldSession::HandleContactListOpcode (WorldPacket & recv_data)
     sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: Received CMSG_CONTACT_LIST");
     uint32 mask;
     recv_data >> mask;
+
     sLog->outDebug(LOG_FILTER_NETWORKIO, "mask value is %u", mask);
     _player->GetSocial()->SendSocialList(_player, mask);
 }
@@ -556,7 +561,6 @@ void WorldSession::HandleAddFriendOpcode (WorldPacket & recv_data)
     std::string friendNote;
 
     recv_data >> friendName;
-
     recv_data >> friendNote;
 
     if (!normalizePlayerName(friendName))
@@ -877,7 +881,7 @@ void WorldSession::HandleAreaTriggerOpcode (WorldPacket & recv_data)
         float rotPlayerX = (float) (atEntry->x + playerBoxDistX * cosVal - playerBoxDistY * sinVal);
         float rotPlayerY = (float) (atEntry->y + playerBoxDistY * cosVal + playerBoxDistX * sinVal);
 
-        // box edges are parallel to coordiante axis, so we can treat every dimension independently :D
+        // box edges are parallel to coordinate axis, so we can treat every dimension independently :D
         float dz = pl->GetPositionZ() - atEntry->z;
         float dx = rotPlayerX - atEntry->x;
         float dy = rotPlayerY - atEntry->y;
@@ -915,6 +919,7 @@ void WorldSession::HandleAreaTriggerOpcode (WorldPacket & recv_data)
             }
         }
     }
+
     if (sObjectMgr->IsTavernAreaTrigger(Trigger_ID))
     {
         // set resting flag we are in the inn
@@ -1047,10 +1052,10 @@ void WorldSession::HandleRequestAccountData (WorldPacket& recv_data)
 
     WorldPacket data(SMSG_UPDATE_ACCOUNT_DATA, 8 + 4 + 4 + 4 + destSize);
     data << uint64(_player ? _player->GetGUID() : 0);          // player guid
-    data << uint32(type);          // type (0-7)
-    data << uint32(adata->Time);          // unix time
-    data << uint32(size);          // decompressed length
-    data.append(dest);          // compressed data
+    data << uint32(type);                                      // type (0-7)
+    data << uint32(adata->Time);                               // unix time
+    data << uint32(size);                                      // decompressed length
+    data.append(dest);                                         // compressed data
     SendPacket(&data);
 }
 
@@ -1237,9 +1242,8 @@ void WorldSession::HandleInspectOpcode (WorldPacket& recv_data)
         return;
 
     uint32 talent_points = 0x29;
-    uint32 guid_size = plr->GetPackGUID().wpos();
-    WorldPacket data(SMSG_INSPECT_TALENT, guid_size + 4 + talent_points, true);
-    data.append(plr->GetPackGUID());
+    WorldPacket data(SMSG_INSPECT_TALENT, 8 + 4 + talent_points, true);
+    data << plr->GetGUID();
 
     if (sWorld->getBoolConfig(CONFIG_TALENTS_INSPECTING) || _player->isGameMaster())
     {
@@ -1253,6 +1257,16 @@ void WorldSession::HandleInspectOpcode (WorldPacket& recv_data)
     }
 
     plr->BuildEnchantmentsInfoData(&data);
+    if (uint32 guildId = plr->GetGuildId())
+    {
+        if (Guild* pGuild = sObjectMgr->GetGuildById(guildId))
+        {
+            data << uint64(pGuild->GetId());            // not sure
+            data << uint32(pGuild->GetLevel());         // guild level
+            data << uint64(plr->GetGUID());             // not sure
+            data << uint32(pGuild->GetMembersCount());  // number of members
+        }
+    }
     SendPacket(&data);
 }
 
