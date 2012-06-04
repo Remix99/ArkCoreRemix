@@ -19,7 +19,7 @@ class System_OnKill : public PlayerScript
 		struct KillStreak_Info
 		{
 			uint32 killstreak;
-			uint64 lastkill;
+			uint32 lastkill;
 		};
 
 		static std::map<uint32, KillStreak_Info> KillStreakData;
