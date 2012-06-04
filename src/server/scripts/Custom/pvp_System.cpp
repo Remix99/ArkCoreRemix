@@ -13,8 +13,8 @@ class System_OnKill : public PlayerScript
 
 	void OnPVPKill(Player * Killer, Player * Victim)
 	{
-		uint64 KillerGUID = Killer->GetGUID();
-		uint64 VictimGUID = Victim->GetGUID();
+		uint32 KillerGUID = Killer->GetGUID();
+		uint32 VictimGUID = Victim->GetGUID();
 
 		struct KillStreak_Info
 		{
