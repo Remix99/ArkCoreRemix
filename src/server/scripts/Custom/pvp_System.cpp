@@ -13,16 +13,16 @@ class System_OnKill : public PlayerScript
 
 	void OnPVPKill(Player * Killer, Player * Victim)
 	{
-		uint32 KillerGUID = Killer->GetGUID();
-		uint32 VictimGUID = Victim->GetGUID();
+		uint64 KillerGUID = Killer->GetGUID();
+		uint64 VictimGUID = Victim->GetGUID();
 
 		struct KillStreak_Info
 		{
 			uint32 killstreak;
-			uint32 lastkill;
+			uint64 lastkill;
 		};
 
-		static std::map<uint32, KillStreak_Info> KillStreakData;
+		static std::map<uint64, KillStreak_Info> KillStreakData;
 
 		if( KillerGUID == VictimGUID || KillStreakData[KillerGUID].lastkill == VictimGUID )
 			return;
