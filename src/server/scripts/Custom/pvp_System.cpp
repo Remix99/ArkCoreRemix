@@ -22,7 +22,7 @@ class System_OnKill : public PlayerScript
 			uint64 lastkill;
 		};
 
-		static std::map<uint64, KillStreak_Info> KillStreakData;
+		static std::map<uint32, SystemInfo> KillStreakData;
 
 		if( KillerGUID == VictimGUID || KillStreakData[KillerGUID].lastkill == VictimGUID )
 			return;
