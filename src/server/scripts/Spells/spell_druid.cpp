@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011-2012 ArkCORE <http://www.arkania.net/>
- * Copyright (C) 2010-2012 Project SkyFire <http://www.projectskyfire.org/> 
+ * Copyright (C) 2010-2012 Project SkyFire <http://www.projectskyfire.org/>
  * Copyright (C) 2006-2012 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@
 
 enum DruidSpells
 {
-	DRUID_INCREASED_MOONFIRE_DURATION   = 38414,
+    DRUID_INCREASED_MOONFIRE_DURATION   = 38414,
     DRUID_NATURES_SPLENDOR              = 57865,
     DRUID_NPC_WILD_MUSHROOM             = 47649,
     DRUID_TALENT_FUNGAL_GROWTH_1        = 78788,
@@ -266,40 +266,49 @@ class spell_dru_ferocious_bite : public SpellScriptLoader
 // Spell Id: 1126
 class spell_dru_mark_of_the_wild : public SpellScriptLoader
 {
-    public:
-        spell_dru_mark_of_the_wild() : SpellScriptLoader("spell_dru_mark_of_the_wild") { }
+public:
+    spell_dru_mark_of_the_wild() : SpellScriptLoader("spell_dru_mark_of_the_wild") { }
 
-        class spell_dru_mark_of_the_wild_SpellScript : public SpellScript
+    class spell_dru_mark_of_the_wild_SpellScript : public SpellScript
+    {
+        PrepareSpellScript(spell_dru_mark_of_the_wild_SpellScript);
+
+        void HandleDummy(SpellEffIndex /*effIndex*/)
         {
-            PrepareSpellScript(spell_dru_mark_of_the_wild_SpellScript);
-
-            void HandleDummy(SpellEffIndex /*effIndex*/)
+            if (Unit* caster = GetCaster())
             {
-                if (Unit* caster = GetCaster())
+                if (caster->GetTypeId() == TYPEID_PLAYER)
                 {
-                    if (caster->GetTypeId() != TYPEID_PLAYER)
-                        return;
-
                     std::list<Unit*> PartyMembers;
                     caster->GetPartyMembers(PartyMembers);
 
-                    if (PartyMembers.size() > 1)
+                    bool Continue = false;
+                    uint32 player = 0;
+
+                    for (std::list<Unit*>::iterator itr = PartyMembers.begin(); itr != PartyMembers.end(); ++itr) // If caster is in party with a player
+                    {
+                        ++player;
+                        if (Continue == false && player > 1)
+                            Continue = true;
+                    }
+                    if (Continue == true)
                         caster->CastSpell(GetHitUnit(), 79061, true); // Mark of the Wild (Raid)
                     else
                         caster->CastSpell(GetHitUnit(), 79060, true); // Mark of the Wild (Caster)
                 }
             }
-
-            void Register()
-            {
-                OnEffectHitTarget += SpellEffectFn(spell_dru_mark_of_the_wild_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
-            }
-        };
-
-        SpellScript* GetSpellScript() const
-        {
-            return new spell_dru_mark_of_the_wild_SpellScript;
         }
+
+        void Register()
+        {
+            OnEffectHitTarget += SpellEffectFn(spell_dru_mark_of_the_wild_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+        }
+    };
+
+    SpellScript* GetSpellScript() const
+    {
+        return new spell_dru_mark_of_the_wild_SpellScript;
+    }
 };
 
 // Berserk
@@ -347,7 +356,7 @@ class spell_druid_wild_mushroom : public SpellScriptLoader
                 {
                     PreventHitDefaultEffect(effIndex);
                     const SpellEntry* spell = GetSpellInfo();
-                    
+
                     std::list<Creature*> list;
                     player->GetCreatureListWithEntryInGrid(list, DRUID_NPC_WILD_MUSHROOM, 500.0f);
                     for (std::list<Creature*>::iterator i = list.begin(); i != list.end(); ++i)
