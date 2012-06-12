@@ -1371,7 +1371,7 @@ void AddBattlegroundScripts ()
 void AddSC_Gossip_CheckCombat();
 void AddSC_Npc_Beastmaster();
 void AddSC_Title_NPC();
-void AddSCSystem_OnPVPKill();
+void AddSC_System_OnPVPKill();
 #endif
 
 void AddCustomScripts() {
