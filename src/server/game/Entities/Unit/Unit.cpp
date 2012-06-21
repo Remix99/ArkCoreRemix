@@ -6122,15 +6122,15 @@ bool Unit::HandleDummyAuraProc (Unit *pVictim, uint32 damage, AuraEffect* trigge
             triggered_spell_id = 54181;
             break;
         }
-         // Impending Doom
-         if (dummySpell->SpellIconID == 195)
-         {
-             if (Unit* caster = triggeredByAura->GetCaster())
-             {
-                 caster->ToPlayer()->UpdateSpellCooldown(47241, -(dummySpell->EffectBasePoints[1]));
-             }
-             return true;
-         }
+        // Impending Doom
+        if (dummySpell->SpellIconID == 195)
+        {
+            if (Unit* caster = triggeredByAura->GetCaster())
+            {
+                caster->ToPlayer()->UpdateSpellCooldown(47241, -(dummySpell->EffectBasePoints[1]));
+            }
+            return true;
+        }
         switch (dummySpell->Id)
         {
         // Siphon Life
@@ -6712,12 +6712,6 @@ bool Unit::HandleDummyAuraProc (Unit *pVictim, uint32 damage, AuraEffect* trigge
     {
         switch (dummySpell->Id)
         {
-        // Glyph of Backstab
-        case 56800:
-        {
-            triggered_spell_id = 63975;
-            break;
-        }
             // Deadly Throw Interrupt
         case 32748:
         {
@@ -6726,6 +6720,38 @@ bool Unit::HandleDummyAuraProc (Unit *pVictim, uint32 damage, AuraEffect* trigge
                 return false;
 
             triggered_spell_id = 32747;
+            break;
+        }
+        case 56807:          // Glyph of hemorrhage
+        {
+            basepoints0 = int32(0.40f * damage);
+            triggered_spell_id = 89775;
+            break;
+        }
+            // Venomeous wounds rank 1 & 2
+        case 79133:
+        case 79134:
+        {
+            if (effIndex != 0)
+                return false;
+
+            bool poisoned = false;
+            Unit::AuraApplicationMap const& auras = target->GetAppliedAuras();
+
+            for (Unit::AuraApplicationMap::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
+            {
+                if (itr->second->GetBase()->GetSpellProto()->Dispel == DISPEL_POISON)
+                {
+                    poisoned = true;
+                    break;
+                }
+            }
+            if (!poisoned)
+                return false;
+
+            basepoints0 = triggerAmount;
+            this->CastCustomSpell(this, 51637, &basepoints0, NULL, NULL, true);
+            triggered_spell_id = 79136;
             break;
         }
         case 51698:          // Honor Among Thieves
@@ -7522,7 +7548,7 @@ bool Unit::HandleDummyAuraProc (Unit *pVictim, uint32 damage, AuraEffect* trigge
             {
                 if (ToPlayer()->HasSpellCooldown(16166))
                 {
-                    ToPlayer()->UpdateSpellCooldown(16166, -1); // Remove 1 sec
+                    ToPlayer()->UpdateSpellCooldown(16166, -1);          // Remove 1 sec
                     return true;
                 }
             }
@@ -7851,15 +7877,15 @@ bool Unit::HandleDummyAuraProc (Unit *pVictim, uint32 damage, AuraEffect* trigge
             return true;
         }
         // Tidal Waves
-        if (dummySpell->SpellIconID == 3057)
+        case 51562:
+        case 51563:
+        case 51564:
         {
-            if (!procSpell)
-                return false;
-
-            int32 bp0 = -(dummySpell->EffectBasePoints[0]);
-            int32 bp1 = dummySpell->EffectBasePoints[0];
-            CastCustomSpell(this, 53390, &bp0, &bp1, NULL, true, 0, 0, GetGUID());
-            return true;
+            CustomSpellValues values;
+            values.AddSpellMod(SPELLVALUE_BASE_POINT0, -(dummySpell->EffectBasePoints[0]));
+            values.AddSpellMod(SPELLVALUE_BASE_POINT1, dummySpell->EffectBasePoints[0]);
+            CastCustomSpell(53390, values, this);
+            break;
         }
         // Telluric Currents
         if (dummySpell->SpellIconID == 320)
@@ -8322,20 +8348,26 @@ bool Unit::HandleAuraProc (Unit * pVictim, uint32 damage, Aura * triggeredByAura
         switch (dummySpell->Id)
         {
         // Pursuit of Justice
-        //case 26022:
-        //case 26023: {
-        //	*handled = true;
-        // Hack, we need the new spell dbcs implemented in
-        // order to add the missing spell 32733 wich i suppose,
-        // is the cooldown marker used by blizz to share the cd
-        // of Pursuit of justice and Blessed life proc.
-        //if (!HasAura(31828) && !HasAura(31829) && (GetAllSpellMechanicMask(procSpell) && ((1 << MECHANIC_ROOT) | (1 << MECHANIC_STUN) | (1 << MECHANIC_FEAR)))) {
-        //	CastSpell(pVictim, 89024, true);
-        //	return true;
-        //}
-        //break;
-        //}
-        // Bone Shield cooldown
+        case 26022:
+        case 26023:
+        {
+            *handled = true;
+
+            if (!procSpell)
+                return false;
+
+            // Need stun, root, or fear mechanic
+            if (!(GetAllSpellMechanicMask(procSpell) & ((1 << MECHANIC_SILENCE) | (1 << MECHANIC_STUN) | (1 << MECHANIC_FEAR))))
+                return false;
+
+            if (!(HasAura(32733)))          // Pursuit of Justice and Blessed Life cooldown marker
+            {
+                CastSpell(this, 89024, true);
+                CastSpell(this, 32733, true);
+            }
+            break;
+        }
+            // Bone Shield cooldown
         case 49222:
         {
             *handled = true;
@@ -8526,6 +8558,35 @@ bool Unit::HandleAuraProc (Unit * pVictim, uint32 damage, Aura * triggeredByAura
         }
         break;
     }
+        case SPELLFAMILY_ROGUE:
+            switch(dummySpell->Id)
+            {
+                // Gouge
+                case 1776:
+                    *handled = true;
+                    // Check so gouge spell effect [1] (SPELL_EFFECT_SCHOOL_DAMAGE) cannot cancel stun effect
+                    if(procSpell && procSpell->Id == 1776)
+                        return false;
+                    return true;
+                break;
+            }
+            break;
+        case SPELLFAMILY_WARRIOR:
+        {
+            switch (dummySpell->Id)
+            {
+                // Item - Warrior T10 Protection 4P Bonus
+                case 70844:
+                {
+                    int32 basepoints0 = CalculatePctN(GetMaxHealth(), SpellMgr::CalculateSpellEffectAmount(dummySpell, 1));
+                    CastCustomSpell(this, 70845, &basepoints0, NULL, NULL, true);
+                    break;
+                }
+                default:
+                    break;
+            }
+            break;
+        }	
     }
     return false;
 }
