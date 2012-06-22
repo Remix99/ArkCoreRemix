@@ -2993,11 +2993,10 @@ void Guild::_BroadcastEvent (GuildEvents guildEvent, const uint64& guid, const c
 }
 
 // Guild Advancement
-void Guild::GainXP(uint64 xp)
+void Guild::GainXP (uint64 xp)
 {
     if (!xp)
         return;
-
     if (!sWorld->getBoolConfig(CONFIG_GUILD_ADVANCEMENT_ENABLED))
         return;
     if (GetLevel() >= sWorld->getIntConfig(CONFIG_GUILD_ADVANCEMENT_MAX_LEVEL))
@@ -3006,15 +3005,11 @@ void Guild::GainXP(uint64 xp)
     uint64 new_xp = m_xp + xp;
     uint64 nextLvlXP = GetNextLevelXP();
     uint8 level = GetLevel();
-
-    if (new_xp > m_xp_cap)
-        return;
-
-    if (new_xp >= nextLvlXP && level < sWorld->getIntConfig(CONFIG_GUILD_ADVANCEMENT_MAX_LEVEL))
+    while (new_xp >= nextLvlXP && level < sWorld->getIntConfig(CONFIG_GUILD_ADVANCEMENT_MAX_LEVEL))
     {
         new_xp -= nextLvlXP;
 
-        if (level < 25)
+        if (level < sWorld->getIntConfig(CONFIG_GUILD_ADVANCEMENT_MAX_LEVEL))
         {
             LevelUp();
             ++level;
@@ -3023,23 +3018,10 @@ void Guild::GainXP(uint64 xp)
     }
 
     m_xp = new_xp;
-    m_today_xp += xp;
     SaveXP();
-
-    WorldPacket data(SMSG_GUILD_XP_UPDATE, 8*5);
-    data << uint64(GetXPCap());                         // max daily xp
-    data << uint64(GetNextLevelXP() - GetCurrentXP());  // next level XP
-    data << uint64(GetXPCap());                         // weekly xp
-    data << uint64(GetCurrentXP());                     // Curr exp
-    data << uint64(GetTodayXP());                       // Today exp
-
-    AddGuildNews(GUILD_NEWS_GUILD_LEVEL_REACHED, 0, level, 0);
-
-    for (Members::const_iterator itr = m_members.begin(); itr != m_members.end(); ++itr)
-        if (Player* player = itr->second->FindPlayer())
-            player->GetSession()->SendPacket(&data);
 }
-void Guild::LevelUp()
+
+void Guild::LevelUp ()
 {
     if (!sWorld->getBoolConfig(CONFIG_GUILD_ADVANCEMENT_ENABLED))
         return;
@@ -3048,32 +3030,28 @@ void Guild::LevelUp()
     m_level = level;
     m_nextLevelXP = sObjectMgr->GetXPForGuildLevel(level);
 
-    WorldPacket data(SMSG_GUILD_XP_UPDATE, 8*5);
-    data << uint64(GetXPCap());                         // max daily xp
-    data << uint64(GetNextLevelXP() - GetCurrentXP());  // next level XP
-    data << uint64(GetXPCap());                         // weekly xp
-    data << uint64(GetCurrentXP());                     // Curr exp
-    data << uint64(GetTodayXP());                       // Today exp
+    WorldPacket data(SMSG_GUILD_XP_UPDATE, 8 * 5);
+    data << uint64(0x37);          // max daily xp
+    data << uint64(GetNextLevelXP());          // next level XP
+    data << uint64(0x37);          // weekly xp
+    data << uint64(GetCurrentXP());          // Curr exp
+    data << uint64(0);          // Today exp (not supported yet)
 
     // Find perk to gain
     uint32 spellId = 0;
-    if (GuildPerksEntry const* perk = sGuildPerksStore.LookupEntry(level))
+    if (const GuildPerksEntry* perk = sGuildPerksStore.LookupEntry(level - 1))
         spellId = perk->SpellId;
 
     // Notify players of level change
     for (Members::const_iterator itr = m_members.begin(); itr != m_members.end(); ++itr)
-    {
         if (Player *player = itr->second->FindPlayer())
         {
             player->SetUInt32Value(PLAYER_GUILDLEVEL, level);
             player->GetSession()->SendPacket(&data);
 
             if (spellId)
-               player->learnSpell(spellId, true);
-
-//            GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_REACH_GUILD_LEVEL, player);
+                player->learnSpell(spellId, true);
         }
-    }
 }
 
 void Guild::SaveXP ()
@@ -3088,9 +3066,4 @@ void Guild::SaveXP ()
         stmt->setUInt32(2, m_id);
         CharacterDatabase.Execute(stmt);
     }
-}
-
-void Guild::AddGuildNews(uint32 type, uint64 source_guild, int value1, int value2, int flags)
-{
-    // TODO: this needs implementing.
 }
