@@ -594,9 +594,9 @@ struct AreaTriggerEntry
 
 struct PhaseEntry
 {
-    uint32 ID;          // 0
-    DBCString Name;          // 1
-    uint32 phaseShift;          // 2
+    uint32 ID;                  // 0
+    DBCString Name;             // 1
+    uint32 Type;                // 2
 };
 
 struct ArmorLocationEntry
@@ -1601,6 +1601,7 @@ struct SkillLineAbilityEntry
     uint32 min_value;          // 11       m_trivialSkillLineRankLow
     //uint32                                                // 12
     //uint32                                                // 13       4.0.0
+    uint32 characterPoints[2];   //12 and 13
 };
 
 struct SoundEntriesEntry

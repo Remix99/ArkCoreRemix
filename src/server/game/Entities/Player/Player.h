@@ -165,7 +165,7 @@ enum TrainerSpellState
 
 enum TalentBranchSpec
 {
-    BS_WARRIOR_ARMS = 746, BS_WARRIOR_FURY = 815, BS_WARRIOR_PROTECTION = 845, BS_PALADIN_HOLY = 831, BS_PALADIN_PROTECTION = 839, BS_PALADIN_RETRIBUTION = 855, BS_HUNTER_BEAST_MASTERY = 811, BS_HUNTER_MARKMANSHIP = 807, BS_HUNTER_SURVIVAL = 809, BG_ROGUE_ASSASINATION = 182, BS_ROGUE_COMBAT = 181, BS_ROGUE_SUBTLETY = 183, BS_PRIEST_DISCIPLINE = 760, BS_PRIEST_HOLY = 813, BS_PRIEST_SHADOW = 759, BS_DEATH_KNIGHT_BLOOD = 398, BS_DEATH_KNIGHT_FROST = 399, BS_DEATH_KNIGHT_UNHOLY = 400, BS_SHAMAN_ELEMENTAL = 261, BS_SHAMAN_ENCHANCEMENT = 263, BS_SHAMAN_RESTORATION = 262, BS_MAGE_ARCANE = 799, BS_MAGE_FIRE = 851, BS_MAGE_FROST = 823, BS_WARLOCK_AFFLICTION = 871, BS_WARLOCK_DEMONOLOGY = 867, BS_WARLOCK_DESTRUCTION = 865, BS_DRUID_BALANCE = 752, BS_DRUID_FERAL_COMBAT = 750, BS_DRUID_RESTORATION = 748
+    BS_WARRIOR_ARMS = 746, BS_WARRIOR_FURY = 815, BS_WARRIOR_PROTECTION = 845, BS_PALADIN_HOLY = 831, BS_PALADIN_PROTECTION = 839, BS_PALADIN_RETRIBUTION = 855, BS_HUNTER_BEAST_MASTERY = 811, BS_HUNTER_MARKMANSHIP = 807, BS_HUNTER_SURVIVAL = 809, BG_ROGUE_ASSASINATION = 182, BS_ROGUE_COMBAT = 181, BS_ROGUE_SUBTLETY = 183, BS_PRIEST_DISCIPLINE = 760, BS_PRIEST_HOLY = 813, BS_PRIEST_SHADOW = 795, BS_DEATH_KNIGHT_BLOOD = 398, BS_DEATH_KNIGHT_FROST = 399, BS_DEATH_KNIGHT_UNHOLY = 400, BS_SHAMAN_ELEMENTAL = 261, BS_SHAMAN_ENCHANCEMENT = 263, BS_SHAMAN_RESTORATION = 262, BS_MAGE_ARCANE = 799, BS_MAGE_FIRE = 851, BS_MAGE_FROST = 823, BS_WARLOCK_AFFLICTION = 871, BS_WARLOCK_DEMONOLOGY = 867, BS_WARLOCK_DESTRUCTION = 865, BS_DRUID_BALANCE = 752, BS_DRUID_FERAL_COMBAT = 750, BS_DRUID_RESTORATION = 748
 };
 
 enum ActionButtonUpdateState
@@ -340,6 +340,14 @@ struct Areas
     float y1;
     float y2;
 };
+
+struct TerrainSwap
+{
+    uint32 map;
+    uint32 ts_map;
+    uint32 ts_phase;
+};
+typedef UNORDERED_MAP<uint32, TerrainSwap> TerrainSwapMap;
 
 #define MAX_RUNES       6
 
@@ -921,7 +929,7 @@ public:
         return m_spellCastItem != 0;
     }
 
-    uint32 GetMoney () const
+    uint64 GetMoney () const
     {
         return m_money;
     }
@@ -1706,25 +1714,19 @@ public:
         m_weaponChangeTimer = time;
     }
 
-    uint32 GetMoney () const
-    {
-        return GetUInt32Value(PLAYER_FIELD_COINAGE);
-    }
-    void ModifyMoney (int32 d);
-    bool HasEnoughMoney (uint32 amount) const
-    {
-        return (GetMoney() >= amount);
-    }
-    bool HasEnoughMoney (int32 amount) const
+    uint64 GetMoney() const { return GetUInt64Value(PLAYER_FIELD_COINAGE); }
+    void ModifyMoney(int32 d);
+    bool HasEnoughMoney(uint64 amount) const { return (GetMoney() >= amount); }
+    bool HasEnoughMoney(int32 amount) const
     {
         if (amount > 0)
-            return (GetMoney() >= uint32(amount));
+            return (GetMoney() >= (uint32) amount);
         return true;
     }
 
-    void SetMoney (uint32 value)
+    void SetMoney(uint32 value)
     {
-        SetUInt32Value(PLAYER_FIELD_COINAGE, value);
+        SetUInt32Value (PLAYER_FIELD_COINAGE, value);
         MoneyChanged(value);
         UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_GOLD_VALUE_OWNED);
     }
@@ -2005,6 +2007,11 @@ public:
     void UpdatePvP(bool state, bool override=false);
     void UpdateZone(uint32 newZone, uint32 newArea);
     void UpdateArea(uint32 newArea);
+
+    // TerrainSwap handling
+    void UpdateTerrain();
+    void SwapTerrain(uint16 phase, uint16 map);
+    void SendSwapTerrain(uint16 phase, uint16 map);
 
     void UpdateZoneDependentAuras(uint32 zone_id);          // zones
     void UpdateAreaDependentAuras(uint32 area_id);// subzones
@@ -3171,6 +3178,7 @@ protected:
     bool canSeeAlways(WorldObject const* obj) const;
 
     bool isAlwaysDetectableFor(WorldObject const* seer) const;
+
 private:
     // internal common parts for CanStore/StoreItem functions
     uint8 _CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemPosCountVec& dest, ItemPrototype const *pProto, uint32& count, bool swap, Item *pSrcItem) const;
@@ -3243,6 +3251,9 @@ private:
     InstanceTimeMap _instanceResetTimes;
     InstanceSave* _pendingBind;
     uint32 _pendingBindTimer;
+
+    //TerrainSwap
+    TerrainSwapMap _TerrainSwap;
 };
 
 class Player_bot: public Player

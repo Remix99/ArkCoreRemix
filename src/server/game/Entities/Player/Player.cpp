@@ -33,7 +33,6 @@
 #include "WorldSession.h"
 #include "UpdateMask.h"
 #include "Player.h"
-#include "ClassPlayer.h"
 #include "Vehicle.h"
 #include "SkillDiscovery.h"
 #include "QuestDef.h"
@@ -54,6 +53,7 @@
 #include "Formulas.h"
 #include "Group.h"
 #include "Guild.h"
+#include "GuildMgr.h"
 #include "Pet.h"
 #include "Util.h"
 #include "Transport.h"
@@ -882,8 +882,7 @@ Player::Player (WorldSession *session) :
     SetPendingBind(NULL, 0);
 }
 
-Player::Player (WorldSession &session) :
-        Unit(), m_achievementMgr(this), m_reputationMgr(this)
+Player::Player (WorldSession &session) : Unit(), m_achievementMgr(this), m_reputationMgr(this)
 {
 #ifdef _MSC_VER
 #pragma warning(default:4355)
@@ -2318,7 +2317,7 @@ bool Player::ToggleAFK ()
     // afk player not allowed in battleground
     if (state && InBattleground() && !InArena())
         LeaveBattleground();
-    if (Guild * pGuild = sObjectMgr->GetGuildById(GetGuildId()))
+    if (Guild* pGuild = sGuildMgr->GetGuildById(GetGuildId()))
         pGuild->OnPlayerStatusChange(this, GUILD_MEMBER_FLAG_AFK, state);
 
     return state;
@@ -2330,7 +2329,7 @@ bool Player::ToggleDND ()
 
     bool state = HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_DND);
 
-    if (Guild * pGuild = sObjectMgr->GetGuildById(GetGuildId()))
+    if (Guild* pGuild = sGuildMgr->GetGuildById(GetGuildId()))
         pGuild->OnPlayerStatusChange(this, GUILD_MEMBER_FLAG_DND, state);
     return state;
 }
@@ -3358,7 +3357,7 @@ void Player::GiveLevel (uint8 level)
     if (level == getLevel())
         return;
 
-    if (Guild * pGuild = sObjectMgr->GetGuildById(this->GetGuildId()))
+    if (Guild* pGuild = sGuildMgr->GetGuildById(this->GetGuildId()))
         pGuild->UpdateMemberData(this, GUILD_MEMBER_DATA_LEVEL, level);
 
     sScriptMgr->OnPlayerLevelChanged(this, level);
@@ -4714,7 +4713,7 @@ bool Player::resetTalents (bool no_cost)
         return false;
     }
 
-    uint32 cost = 0;
+    uint64 cost = 0;
 
     if (!no_cost && !sWorld->getBoolConfig(CONFIG_NO_RESET_TALENT_COST))
     {
@@ -4793,14 +4792,6 @@ bool Player::resetTalents (bool no_cost)
         m_resetTalentsCost = cost;
         m_resetTalentsTime = time(NULL);
     }
-
-    /* when prev line will dropped use next line
-     if (Pet* pet = GetPet())
-     {
-     if (pet->getPetType() == HUNTER_PET && !pet->GetCreatureInfo()->isTameable(CanTameExoticPets()))
-     RemovePet(NULL, PET_SAVE_NOT_IN_SLOT, true);
-     }
-     */
 
     return true;
 }
@@ -5117,7 +5108,7 @@ void Player::DeleteFromDB (uint64 playerguid, uint32 accountId, bool updateRealm
     sObjectAccessor->ConvertCorpseForPlayer(playerguid);
 
     if (uint32 guildId = GetGuildIdFromDB(playerguid))
-        if (Guild * pGuild = sObjectMgr->GetGuildById(guildId))
+        if (Guild* pGuild = sGuildMgr->GetGuildById(guildId))
             pGuild->DeleteMember(guid);
 
     // remove from arena teams
@@ -5815,7 +5806,7 @@ uint32 Player::DurabilityRepair (uint16 pos, bool cost, float discountMod, bool 
             }
 
             uint32 dmultiplier = dcost->multiplier[ItemSubClassToDurabilityMultiplierId(ditemProto->Class, ditemProto->SubClass)];
-            uint32 costs = uint32(LostDurability * dmultiplier * double(dQualitymodEntry->quality_mod));
+            uint64 costs = uint32(LostDurability * dmultiplier * double(dQualitymodEntry->quality_mod));
 
             costs = uint32(costs * discountMod * sWorld->getRate(RATE_REPAIRCOST));
 
@@ -5830,7 +5821,7 @@ uint32 Player::DurabilityRepair (uint16 pos, bool cost, float discountMod, bool 
                     return TotalCost;
                 }
 
-                Guild *pGuild = sObjectMgr->GetGuildById(GetGuildId());
+                Guild* pGuild = sGuildMgr->GetGuildById(GetGuildId());
                 if (!pGuild)
                     return TotalCost;
 
@@ -6480,7 +6471,8 @@ bool Player::UpdateCraftSkill (uint32 spellid)
                     learnSpell(discoveredSpell, false);
             }
 
-            uint32 craft_skill_gain = sWorld->getIntConfig(CONFIG_SKILL_GAIN_CRAFTING);
+            uint32 SkillGainPoints = _spell_idx->second->characterPoints[0];
+            uint32 craft_skill_gain = SkillGainPoints * sWorld->getIntConfig(CONFIG_SKILL_GAIN_CRAFTING);
 
             return UpdateSkillPro(_spell_idx->second->skillId, SkillGainChance(SkillValue, _spell_idx->second->max_value, (_spell_idx->second->max_value + _spell_idx->second->min_value) / 2, _spell_idx->second->min_value), craft_skill_gain);
         }
@@ -7803,7 +7795,7 @@ void Player::UpdateZone (uint32 newZone, uint32 newArea)
 {
     if (m_zoneUpdateId != newZone)
     {
-        if (Guild * pGuild = sObjectMgr->GetGuildById(GetGuildId()))
+        if (Guild* pGuild = sGuildMgr->GetGuildById(GetGuildId()))
             pGuild->UpdateMemberData(this, GUILD_MEMBER_DATA_ZONEID, newZone);
 
         sOutdoorPvPMgr->HandlePlayerLeaveZone(this, m_zoneUpdateId);
@@ -7928,6 +7920,18 @@ void Player::UpdateZone (uint32 newZone, uint32 newArea)
         SetGroupUpdateFlag(GROUP_UPDATE_FLAG_ZONE);
 
     UpdateZoneDependentAuras(newZone);
+}
+
+void Player::UpdateTerrain()
+{
+}
+
+void Player::SwapTerrain(uint16 phase, uint16 map)
+{
+};
+
+void Player::SendSwapTerrain(uint16 phase, uint16 map)
+{
 }
 
 //If players are too far way of duel flag... then player loose the duel
@@ -14957,7 +14961,7 @@ void Player::OnGossipSelect (WorldObject* pSource, uint32 gossipListId, uint32 m
 
     GossipMenuItemData pMenuData = gossipmenu.GetItemData(gossipListId);
 
-    uint32 cost = gossipmenu.GetItem(gossipListId).m_gBoxMoney;
+    uint64 cost = gossipmenu.GetItem(gossipListId).m_gBoxMoney;
     if (!HasEnoughMoney(cost))
     {
         SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
@@ -15712,7 +15716,7 @@ void Player::RewardQuest (Quest const *pQuest, uint32 reward, Object* questGiver
 
     // If the player has a guild, it should gain 1/4 of his experience.
     // Despite of him being at max level or not.
-    if (Guild * pGuild = sObjectMgr->GetGuildById(GetGuildId()))
+    if (Guild* pGuild = sGuildMgr->GetGuildById(GetGuildId()))
         pGuild->GainXP(XP / 4);
 
     // Give player extra money if GetRewOrReqMoney > 0 and get ReqMoney if negative
@@ -17264,7 +17268,7 @@ float Player::GetFloatValueFromArray (Tokens const& data, uint16 index)
     return result;
 }
 
-Player* Player::LoadFromDB (uint32 guid, SQLQueryHolder * holder, WorldSession * session)
+Player* Player::LoadFromDB(uint32 guid, SQLQueryHolder* holder, WorldSession* session)
 {
     ////                                                     0     1        2     3     4        5      6    7      8     9           10              11
     //QueryResult *result = CharacterDatabase.PQuery("SELECT guid, account, name, race, class, gender, level, xp, money, playerBytes, playerBytes2, playerFlags, "
@@ -17291,43 +17295,6 @@ Player* Player::LoadFromDB (uint32 guid, SQLQueryHolder * holder, WorldSession *
     uint8 pClass = fields[4].GetUInt8();
 
     Player* player = NULL;
-    switch (pClass)
-    {
-    case CLASS_WARRIOR:
-        player = new WarriorPlayer(session);
-        break;
-    case CLASS_PALADIN:
-        player = new PaladinPlayer(session);
-        break;
-    case CLASS_HUNTER:
-        player = new HunterPlayer(session);
-        break;
-    case CLASS_ROGUE:
-        player = new RoguePlayer(session);
-        break;
-    case CLASS_PRIEST:
-        player = new PriestPlayer(session);
-        break;
-    case CLASS_DEATH_KNIGHT:
-        player = new DKPlayer(session);
-        break;
-    case CLASS_SHAMAN:
-        player = new ShamanPlayer(session);
-        break;
-    case CLASS_MAGE:
-        player = new MagePlayer(session);
-        break;
-    case CLASS_WARLOCK:
-        player = new WarlockPlayer(session);
-        break;
-    case CLASS_DRUID:
-        player = new DruidPlayer(session);
-        break;
-    default:
-        printf("\nClass %u doesn't exist.\n", pClass);
-        break;
-    }
-
     if (player && player)
         if (player->_LoadFromDB(guid, holder, result))
             return player;
@@ -21390,7 +21357,7 @@ bool Player::BuyItemFromVendorSlot (uint64 vendorguid, uint32 vendorslot, uint32
         }
     }
 
-    uint32 price = crItem->IsGoldRequired(pProto) ? pProto->BuyPrice * count : 0;
+    uint64 price = crItem->IsGoldRequired(pProto) ? pProto->BuyPrice * count : 0;
 
     // reputation discount
     if (price)
@@ -22214,7 +22181,7 @@ void Player::ModifyMoney (int32 d)
 
             SetGuildMoneyModifier(1);
 
-            if (Guild * pGuild = sObjectMgr->GetGuildById(GetGuildId()))
+            if (Guild* pGuild = sGuildMgr->GetGuildById(GetGuildId()))
             {
                 if (pGuild)
                 {
@@ -25359,9 +25326,7 @@ void Player::_SaveTalentBranchSpecs (SQLTransaction& trans)
 {
     trans->PAppend("DELETE FROM character_branchspec WHERE guid='%u'", GetGUIDLow());
     for (uint8 spec = 0; spec < m_specsCount; ++spec)
-    {
         trans->PAppend("INSERT INTO character_branchspec VALUES('%u', '%u', '%u')", GetGUIDLow(), spec, GetTalentBranchSpec(spec));
-    }
 }
 
 void Player::_LoadTalentBranchSpecs (PreparedQueryResult result)
@@ -25637,13 +25602,15 @@ void Player::SetReputation (uint32 factionentry, uint32 value)
 {
     GetReputationMgr().SetReputation(sFactionStore.LookupEntry(factionentry), value);
 }
+
 uint32 Player::GetReputation (uint32 factionentry)
 {
     return GetReputationMgr().GetReputation(sFactionStore.LookupEntry(factionentry));
 }
+
 std::string Player::GetGuildName ()
 {
-    return sObjectMgr->GetGuildById(GetGuildId())->GetName();
+    return sGuildMgr->GetGuildById(GetGuildId())->GetName();
 }
 
 void Player::SendDuelCountdown (uint32 counter)
@@ -25972,6 +25939,9 @@ void Player::RemoveOrAddMasterySpells ()
 
         if (HasAura(76857))
             RemoveAurasDueToSpell(76857);
+            
+        if (HasAura(77486))
+            RemoveAurasDueToSpell(77486);
     }
     else if (HasAuraType(SPELL_AURA_MASTERY))
     {
@@ -26010,5 +25980,9 @@ void Player::RemoveOrAddMasterySpells ()
         if (GetTalentBranchSpec(GetActiveSpec()) == BS_WARRIOR_PROTECTION)
             if (!HasAura(76857))
                 AddAura(76857, this);
+                
+        if (GetTalentBranchSpec(GetActiveSpec()) == BS_PRIEST_SHADOW)
+            if (!HasAura(77486))
+                AddAura(77486, this);
     }
 }
