@@ -31,6 +31,7 @@
 #include "Log.h"
 #include "Opcodes.h"
 #include "Guild.h"
+#include "GuildMgr.h"
 #include "GossipDef.h"
 #include "SocialMgr.h"
 
@@ -49,7 +50,7 @@
 inline Guild* _GetPlayerGuild (WorldSession* session, bool sendError = false)
 {
     if (uint32 guildId = session->GetPlayer()->GetGuildId())          // If guild id = 0, player is not in guild
-        if (Guild * pGuild = sObjectMgr->GetGuildById(guildId))          // Find guild by id
+        if (Guild* pGuild = sGuildMgr->GetGuildById(guildId))          // Find guild by id
             return pGuild;
     if (sendError)
         Guild::SendCommandResult(session, GUILD_CREATE_S, ERR_GUILD_PLAYER_NOT_IN_GUILD);
@@ -67,7 +68,7 @@ void WorldSession::HandleGuildQueryOpcode (WorldPacket& recvPacket)
     recvPacket >> player;
     // Use received guild id to access guild method (not player's guild id)
     uint32 lowGuildId = GUID_LOPART(guildId);
-    if (Guild * pGuild = sObjectMgr->GetGuildById(lowGuildId))
+    if (Guild* pGuild = sGuildMgr->GetGuildById(lowGuildId))
         pGuild->HandleQuery(this);
     else
         Guild::SendCommandResult(this, GUILD_CREATE_S, ERR_GUILD_PLAYER_NOT_IN_GUILD);
@@ -85,7 +86,7 @@ void WorldSession::HandleGuildCreateOpcode (WorldPacket& recvPacket)
     {
         Guild* pGuild = new Guild();
         if (pGuild->Create(GetPlayer(), name))
-            sObjectMgr->AddGuild(pGuild);
+            sGuildMgr->AddGuild(pGuild);
         else
             delete pGuild;
     }
@@ -128,7 +129,7 @@ void WorldSession::HandleGuildAcceptOpcode (WorldPacket& recvPacket)
     // Player cannot be in guild
     if (!GetPlayer()->GetGuildId())
         // Guild where player was invited must exist
-        if (Guild * pGuild = sObjectMgr->GetGuildById(GetPlayer()->GetGuildIdInvited()))
+        if (Guild* pGuild = sGuildMgr->GetGuildById(GetPlayer()->GetGuildIdInvited()))
             pGuild->HandleAcceptMember(this);
 }
 
@@ -254,7 +255,7 @@ void WorldSession::HandleGuildExperienceOpcode(WorldPacket& recvPacket)
 {
     recvPacket.read_skip<uint64>();
 
-    if (Guild * guild = sObjectMgr->GetGuildById(_player->GetGuildId()))
+    if (Guild* guild = sGuildMgr->GetGuildById(_player->GetGuildId()))
     {
         WorldPacket data(SMSG_GUILD_XP_UPDATE, 8*5);
         data << uint64(guild->GetXPCap());                                  // max daily xp
@@ -270,9 +271,12 @@ void WorldSession::HandleGuildMaxExperienceOpcode (WorldPacket& recvPacket)
 {
     recvPacket.read_skip<uint64>();
 
-    WorldPacket data(SMSG_GUILD_MAX_DAILY_XP, 8);
-    data << uint64(67800000);          // Constant value for now
-    SendPacket(&data);
+    if (Guild* guild = sGuildMgr->GetGuildById(_player->GetGuildId()))
+    {
+        WorldPacket data(SMSG_GUILD_MAX_DAILY_XP, 8);
+        data << uint64(67800000);          // Constant value for now
+        SendPacket(&data);
+    }
 }
 
 void WorldSession::HandleGuildRewardsOpcode (WorldPacket& recvPacket)
@@ -282,7 +286,7 @@ void WorldSession::HandleGuildRewardsOpcode (WorldPacket& recvPacket)
 
     recvPacket.read_skip<uint64>();
 
-    ObjectMgr::GuildRewardsVector const& vec = sObjectMgr->GetGuildRewards();
+    GuildRewardsVector const& vec = sGuildMgr->GetGuildRewards();
     if (vec.empty())
         return;
 
@@ -297,16 +301,16 @@ void WorldSession::HandleGuildRewardsOpcode (WorldPacket& recvPacket)
         data << uint32(0);          // unk
 
     for (uint32 i = 0; i < vec.size(); ++i)
-        data << uint64(vec[i]->price);          // money price
+        data << uint64(vec[i].price);          // money price
 
     for (uint32 i = 0; i < vec.size(); ++i)
-        data << uint32(vec[i]->achievement);          // Achievement requirement
+        data << uint32(vec[i].achievement);          // Achievement requirement
 
     for (uint32 i = 0; i < vec.size(); ++i)
-        data << uint32(vec[i]->standing);          // // Reputation level (REP_HONORED, REP_FRIENDLY, etc)
+        data << uint32(vec[i].standing);          // // Reputation level (REP_HONORED, REP_FRIENDLY, etc)
 
     for (uint32 i = 0; i < vec.size(); ++i)
-        data << uint32(vec[i]->item);          // item entry
+        data << uint32(vec[i].item);          // item entry
     SendPacket(&data);
 }
 
@@ -392,31 +396,46 @@ void WorldSession::HandleGuildRankOpcode (WorldPacket& recvPacket)
     if (old_rankId != GR_GUILDMASTER)
     {
         for (uint8 tabId = 0; tabId < GUILD_BANK_MAX_TABS; ++tabId)
-        {
             rightsAndSlots[tabId] = GuildBankRightsAndSlots(BankRights[tabId], BankStacks[tabId]);
-        }
 
+        money *= GOLD; // In game is in gold, in core set in bronze
         pGuild->HandleSetRankInfo(this, new_rankId, rankName, new_rights, money, rightsAndSlots);
     }
     if (old_rankId != new_rankId && old_rankId != GR_GUILDMASTER && new_rankId != GR_GUILDMASTER)
-        pGuild->SwitchRank(old_rankId, new_rankId);
+        pGuild->ChangeMemberRank(old_rankId, new_rankId);
 }
 
-// Cata Status: Done
-// TODO: The structure is completely ignored atm
-void WorldSession::HandleGuildAddRankOpcode (WorldPacket& recvPacket)
+void WorldSession::HandleGuildRanksOpcode(WorldPacket& recvPacket)
 {
-    sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: Received CMSG_GUILD_ADD_RANK");
+    sLog->outDebug(LOG_FILTER_GUILD, "WORLD: Received CMSG_GUILD_ADD_RANK");
 
-    //std::string rankName;
-    //recvPacket >> rankName;
+    uint64 guildGUID;
+
+    recvPacket >> guildGUID;
+
+    Guild* guild = _GetPlayerGuild(this, true);
+    if (!guild)
+    {
+        Guild::SendCommandResult(this, GUILD_CREATE_S, ERR_GUILD_PLAYER_NOT_IN_GUILD);
+        return;
+    }
+
+    guild->SendGuildRankInfo(this);
+}
+
+void WorldSession::HandleGuildAddRankOpcode(WorldPacket& recvPacket)
+{
+    sLog->outDebug(LOG_FILTER_GUILD, "WORLD: Received CMSG_GUILD_ADD_RANK");
+
+    std::string rankName;
+    recvPacket >> rankName;
 
     if (Guild* pGuild = _GetPlayerGuild(this, true))
-        pGuild->HandleAddNewRank(this, "New Rank");
+        pGuild->HandleAddNewRank(this, rankName);
 }
 
 // Cata Status: Done
-void WorldSession::HandleGuildDelRankOpcode (WorldPacket& recvPacket)
+void WorldSession::HandleGuildDelRankOpcode(WorldPacket& recvPacket)
 {
     sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: Received CMSG_GUILD_DEL_RANK");
     uint32 rankid;
@@ -428,7 +447,7 @@ void WorldSession::HandleGuildDelRankOpcode (WorldPacket& recvPacket)
 
 // Cata Status: Done
 // TODO!!! Doesn't update tabard, guild tab until relog
-void WorldSession::HandleSaveGuildEmblemOpcode (WorldPacket& recvPacket)
+void WorldSession::HandleSaveGuildEmblemOpcode(WorldPacket& recvPacket)
 {
     sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: Received MSG_SAVE_GUILD_EMBLEM");
 
@@ -454,7 +473,7 @@ void WorldSession::HandleSaveGuildEmblemOpcode (WorldPacket& recvPacket)
     {
         // "That's not an emblem vendor!"
         Guild::SendSaveEmblemResult(this, ERR_GUILDEMBLEM_INVALIDVENDOR);
-        sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: HandleSaveGuildEmblemOpcode - Unit (GUID: %u) not found or you can't interact with him.", GUID_LOPART(vendorGuid));
+        sLog->outDebug(LOG_FILTER_GUILD, "WORLD: HandleSaveGuildEmblemOpcode - Unit (GUID: %u) not found or you can't interact with him.", GUID_LOPART(vendorGuid));
     }
 }
 
@@ -538,7 +557,7 @@ void WorldSession::HandleGuildBankDepositMoney (WorldPacket & recv_data)
     recv_data >> money;
 
     if (GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
-        if (money && GetPlayer()->HasEnoughMoney(uint32(money)))
+        if (money && GetPlayer()->HasEnoughMoney(money))
             if (Guild* pGuild = _GetPlayerGuild(this))
                 pGuild->HandleMemberDepositMoney(this, money);
 }
@@ -718,4 +737,30 @@ void WorldSession::HandleSetGuildBankTabText (WorldPacket &recv_data)
 
     if (Guild* pGuild = _GetPlayerGuild(this))
         pGuild->SetBankTabText(tabId, text);
+}
+
+void WorldSession::HandleGuildQueryTradeSkill(WorldPacket &recv_data)
+{
+    sLog->outDebug(LOG_FILTER_GUILD, "WORLD: Received CMSG_GUILD_QUERY_TRADESKILL");
+
+    if (Guild* guild = _GetPlayerGuild(this))
+    {
+        WorldPacket data(SMSG_GUILD_TRADESKILL_UPDATE, 4);
+        data << uint32(0);
+
+        SendPacket(&data);
+    }
+}
+
+void WorldSession::HandleGuildQueryNews(WorldPacket &recv_data)
+{
+    sLog->outDebug(LOG_FILTER_GUILD, "WORLD: Received CMSG_GUILD_QUERY_NEWS");
+
+    // Sending guild news
+    if (Guild* guild = _GetPlayerGuild(this))
+    {
+        WorldPacket data(SMSG_GUILD_NEWS_UPDATE, 4);
+        guild->SetGuildNews(data);
+        SendPacket(&data);
+    }
 }

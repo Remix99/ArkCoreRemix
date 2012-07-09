@@ -82,7 +82,7 @@ void WorldSession::SendAuctionHello (uint64 guid, Creature* unit)
 //call this method when player bids, creates, or deletes auction
 void WorldSession::SendAuctionCommandResult (uint32 auctionId, uint32 Action, uint32 ErrorCode, uint64 bidError)
 {
-    WorldPacket data(SMSG_AUCTION_COMMAND_RESULT, 20);
+    WorldPacket data(SMSG_AUCTION_COMMAND_RESULT, 16);
     data << auctionId;
     data << Action;
     data << ErrorCode;
@@ -112,10 +112,11 @@ void WorldSession::SendAuctionOwnerNotification (AuctionEntry* auction)
     data << auction->Id;
     data << auction->bid;
     data << uint32(0);          // unk
+    data << uint32(0);          // unk
+    data << uint32(0);          // unk
     data << uint64(0);          // unk
     data << auction->item_template;
     data << uint32(0);          // Something with item names
-    data << float(0);          // unk
     SendPacket(&data);
 }
 
@@ -221,7 +222,7 @@ void WorldSession::HandleAuctionSellItem (WorldPacket & recv_data)
     AuctionHouseObject* auctionHouse = sAuctionMgr->GetAuctionsMap(pCreature->getFaction());
 
     //we have to take deposit :
-    uint32 deposit = sAuctionMgr->GetAuctionDeposit(auctionHouseEntry, etime, it, count);
+    uint64 deposit = sAuctionMgr->GetAuctionDeposit(auctionHouseEntry, etime, it, count);
     if (!pl->HasEnoughMoney(deposit))
     {
         SendAuctionCommandResult(0, AUCTION_SELL_ITEM, AUCTION_NOT_ENOUGHT_MONEY);
@@ -277,9 +278,12 @@ void WorldSession::HandleAuctionPlaceBid (WorldPacket & recv_data)
 {
     uint64 auctioneer;
     uint32 auctionId;
+    uint32 priceTmp;
     uint64 price;
     recv_data >> auctioneer;
-    recv_data >> auctionId >> price;
+    recv_data >> auctionId >> priceTmp;
+
+    price = priceTmp;
 
     if (!auctionId || !price)
         return;          //check for cheaters
@@ -327,7 +331,7 @@ void WorldSession::HandleAuctionPlaceBid (WorldPacket & recv_data)
         return;
     }
 
-    if (!pl->HasEnoughMoney((uint32) price))
+    if (!pl->HasEnoughMoney((uint64) price))
     {
         //you don't have enought money!, client tests!
         //SendAuctionCommandResult(auction->auctionId, AUCTION_PLACE_BID, ???);
@@ -425,7 +429,7 @@ void WorldSession::HandleAuctionRemoveItem (WorldPacket & recv_data)
         {
             if (auction->bidder > 0)          // If we have a bidder, we have to send him the money he paid
             {
-                uint32 auctionCut = auction->GetAuctionCut();
+                uint64 auctionCut = auction->GetAuctionCut();
                 if (!pl->HasEnoughMoney(auctionCut))          //player doesn't have enough money, maybe message needed
                     return;
                 //some auctionBidderNotification would be needed, but don't know that parts..
@@ -489,6 +493,7 @@ void WorldSession::HandleAuctionListBidderItems (WorldPacket & recv_data)
     if (!pCreature)
     {
         sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: HandleAuctionListBidderItems - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(guid)));
+        recv_data.rfinish();
         return;
     }
 

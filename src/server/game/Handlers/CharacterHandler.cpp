@@ -36,11 +36,11 @@
 #include "Chat.h"
 #include "Group.h"
 #include "Guild.h"
+#include "GuildMgr.h"
 #include "Language.h"
 #include "Log.h"
 #include "Opcodes.h"
 #include "Player.h"
-#include "ClassPlayer.h"
 #include "PlayerDump.h"
 #include "SharedDefines.h"
 #include "SocialMgr.h"
@@ -586,44 +586,6 @@ void WorldSession::HandleCharCreateOpcode (WorldPacket & recv_data)
     }
 
     Player* pNewChar = NULL;
-    switch (class_)
-    {
-    case CLASS_WARRIOR:
-        pNewChar = new WarriorPlayer(this);
-        break;
-    case CLASS_PALADIN:
-        pNewChar = new PaladinPlayer(this);
-        break;
-    case CLASS_HUNTER:
-        pNewChar = new HunterPlayer(this);
-        break;
-    case CLASS_ROGUE:
-        pNewChar = new RoguePlayer(this);
-        break;
-    case CLASS_PRIEST:
-        pNewChar = new PriestPlayer(this);
-        break;
-    case CLASS_DEATH_KNIGHT:
-        pNewChar = new DKPlayer(this);
-        break;
-    case CLASS_SHAMAN:
-        pNewChar = new ShamanPlayer(this);
-        break;
-    case CLASS_MAGE:
-        pNewChar = new MagePlayer(this);
-        break;
-    case CLASS_WARLOCK:
-        pNewChar = new WarlockPlayer(this);
-        break;
-    case CLASS_DRUID:
-        pNewChar = new DruidPlayer(this);
-        break;
-    default:
-        printf("\nClass %u doesn't exist.\n",   class_);
-        ASSERT(false);
-        break;
-    }
-
     ASSERT(pNewChar);
 
     if (!pNewChar->Create(sObjectMgr->GenerateLowGuid(HIGHGUID_PLAYER),   name,   race_,   class_,   gender,   skin,   face,   hairStyle,   hairColor,   facialHair,   outfitId))
@@ -733,7 +695,7 @@ void WorldSession::HandleCharDeleteOpcode (WorldPacket & recv_data)
     std::string name;
 
     // is guild leader
-    if (sObjectMgr->GetGuildByLeader(guid))
+    if (sGuildMgr->GetGuildByLeader(guid))
     {
         WorldPacket data(SMSG_CHAR_DELETE,   1);
         data << (uint8) CHAR_DELETE_FAILED_GUILD_LEADER;
@@ -922,7 +884,7 @@ void WorldSession::HandlePlayerLogin (LoginQueryHolder * holder)
 
     if (pCurrChar->GetGuildId() != 0)
     {
-        if (Guild * pGuild = sObjectMgr->GetGuildById(pCurrChar->GetGuildId()))
+        if (Guild* pGuild = sGuildMgr->GetGuildById(pCurrChar->GetGuildId()))
         {
             pGuild->SendLoginInfo(this);
             pCurrChar->SetUInt32Value(PLAYER_GUILDLEVEL,   uint32(pGuild->GetLevel()));
@@ -1372,7 +1334,7 @@ void WorldSession::HandleAlterAppearance (WorldPacket & recv_data)
     if (bs_skinColor && (bs_skinColor->type != 3 || bs_skinColor->race != _player->getRace() || bs_skinColor->gender != _player->getGender()))
     return;
 
-    uint32 Cost = _player->GetBarberShopCost(bs_hair->hair_id,   Color,   bs_facialHair->hair_id,   bs_skinColor);
+    uint64 Cost = _player->GetBarberShopCost(bs_hair->hair_id,   Color,   bs_facialHair->hair_id,   bs_skinColor);
 
     // 0 - ok
     // 1,   3 - not enough money
