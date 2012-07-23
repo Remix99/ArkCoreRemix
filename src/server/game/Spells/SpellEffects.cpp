@@ -8410,17 +8410,16 @@ void Spell::EffectCastButtons (SpellEffIndex effIndex)
 
         if (m_caster->GetPower(POWER_MANA) < cost)
             break;
-  
-    if (!m_caster->HasSpell(spell_id) || IsPassiveSpell(spellInfo))
+
+        if (!m_caster->HasSpell(spell_id) || IsPassiveSpell(spellInfo))
             continue;
 
         if (spellInfo->TotemCategory[0] < 2 || spellInfo->TotemCategory[0] > 5)
             continue; 
 
-         m_caster->CastSpell(unitTarget, spell_id, true);
-
-         m_caster->ModifyPower(POWER_MANA, -(int32)cost);
-         p_caster->AddSpellAndCategoryCooldowns(spellInfo, 0);
+        m_caster->CastSpell(unitTarget, spell_id, true);
+        m_caster->ModifyPower(POWER_MANA, -(int32) cost);
+        p_caster->AddSpellAndCategoryCooldowns(spellInfo, 0);
     }
 }
 

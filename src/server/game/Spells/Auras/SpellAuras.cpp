@@ -1125,19 +1125,14 @@ void Aura::HandleAuraSpecificMods (AuraApplication const* aurApp, Unit* caster, 
                         target->RemoveAurasByType(SPELL_AURA_PERIODIC_LEECH);
                     }
                 break;
-                 case 48020: // Demonic Circle
-                 if (target->GetTypeId() == TYPEID_PLAYER)
-      if (GameObject *obj = target->GetGameObject(48018))
-      {
-          target->ToPlayer()->AddSpellCooldown(35517, 0, time(NULL) + 1);//add cooldown to custom trigger // If the spell is used Out of Range cool it down to prevent spam // this is optional
-        if (target->IsWithinDist(obj, GetSpellMaxRange(48020, true)))
-        {
-          target->ToPlayer()->AddSpellCooldown(35517, 0, time(NULL) + 30);//add cooldown on successful spell use
-          target->NearTeleportTo(obj->GetPositionX(), obj->GetPositionY(), obj->GetPositionZ(), obj->GetOrientation());
-          target->RemoveMovementImpairingAuras();
-        }
-        break;
-      }
+            case 48020:          // Demonic Circle
+                if (target->GetTypeId() == TYPEID_PLAYER)
+                    if (GameObject* obj = target->GetGameObject(48018))
+                    {
+                        target->NearTeleportTo(obj->GetPositionX(), obj->GetPositionY(), obj->GetPositionZ(), obj->GetOrientation());
+                        target->RemoveMovementImpairingAuras();
+                    }
+                break;
             }
             break;
         case SPELLFAMILY_PRIEST:
@@ -1239,9 +1234,9 @@ void Aura::HandleAuraSpecificMods (AuraApplication const* aurApp, Unit* caster, 
                     }
                 }
                 if(GetId() == 85416)    // Grand Crusader                     
-                {   	
-                    // Reset cooldown on Avanger Shield   	
-                    caster->ToPlayer()->RemoveSpellCooldown(31935, true);   	
+                {  
+                    // Reset cooldown on Avanger Shield  
+                    caster->ToPlayer()->RemoveSpellCooldown(31935, true);  
                 }
                 break;
         case SPELLFAMILY_DEATHKNIGHT:
@@ -1797,7 +1792,7 @@ void Aura::HandleAuraSpecificMods (AuraApplication const* aurApp, Unit* caster, 
                 }
                 // Unholy Presence bonus
                 if (presence == 48265)
-          target->CastSpell(target, 63622, true);
+					target->CastSpell(target, 63622, true);
                 else if (unholyPresenceAura)
                 {
                     int32 basePoints0 = unholyPresenceAura->GetAmount();
@@ -1812,7 +1807,7 @@ void Aura::HandleAuraSpecificMods (AuraApplication const* aurApp, Unit* caster, 
                 if (presence == 48263 || frostPresenceAura)
                     target->RemoveAurasDueToSpell(61261);
                 if (presence == 48265 || unholyPresenceAura)
-          target->RemoveAurasDueToSpell(63622);
+					target->RemoveAurasDueToSpell(63622);
             }
         }
         break;
