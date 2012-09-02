@@ -5829,10 +5829,10 @@ bool Unit::HandleDummyAuraProc (Unit *pVictim, uint32 damage, AuraEffect* trigge
 
             if (!procSpell)
                 return false;
-           
-            basepoints0 = damage * triggerAmount / 100;
-            triggered_spell_id = 91394;
-            break;
+
+        basepoints0 = damage * triggerAmount / 100;
+        triggered_spell_id = 91394;
+        break;
         // Burnout
         if (dummySpell->SpellIconID == 2998)
         {
@@ -5875,6 +5875,14 @@ bool Unit::HandleDummyAuraProc (Unit *pVictim, uint32 damage, AuraEffect* trigge
 
             if (pVictim)
                 CastSpell(pVictim, 31589, false);
+            break;
+        }
+        case 79683:          // Arcane Missiles!
+        {
+            // Do not let arcane missiles missile remove the activation aura
+            if (procSpell->Id == 7268)
+                return false;
+
             break;
         }
             // Glyph of Polymorph
@@ -6698,37 +6706,13 @@ bool Unit::HandleDummyAuraProc (Unit *pVictim, uint32 damage, AuraEffect* trigge
             basepoints0 = triggerAmount * damage / 100;
             break;
         }
-        // King of the Jungle
-        else if (dummySpell->SpellIconID == 2850)
-        {
-            // Effect 0 - mod damage while having Enrage
-            if (effIndex == 0)
-            {
-                if (!(procSpell->SpellFamilyFlags[0] & 0x00080000))
-                    return false;
-                triggered_spell_id = 51185;
-                basepoints0 = triggerAmount;
-                target = this;
-                break;
-            }
-            // Effect 1 - Tiger's Fury restore energy
-            else if (effIndex == 1)
-            {
-                if (!(procSpell->SpellFamilyFlags[2] & 0x00000800))
-                    return false;
-                triggered_spell_id = 51178;
-                basepoints0 = triggerAmount;
-                target = this;
-                break;
-            }
-        }
         break;
     }
     case SPELLFAMILY_ROGUE:
     {
         switch (dummySpell->Id)
         {
-            // Deadly Throw Interrupt
+        // Deadly Throw Interrupt
         case 32748:
         {
             // Prevent cast Deadly Throw Interrupt on self from last effect (apply dummy) of Deadly Throw
@@ -6825,6 +6809,41 @@ bool Unit::HandleDummyAuraProc (Unit *pVictim, uint32 damage, AuraEffect* trigge
     }
     case SPELLFAMILY_HUNTER:
     {
+        case 2225:
+        // Serpent Spread
+        {
+            // Proc only on multi-shot
+            if (!target || procSpell->Id != 2643)
+                return false;
+
+            switch (triggerAmount)
+            {
+            case 30:
+            {
+                // Serpent sting 6s duration
+                triggered_spell_id = 88453;
+                break;
+            }
+            case 60:
+            {
+                // Serpent sting 9s duration
+                triggered_spell_id = 88466;
+                break;
+            }
+                break;
+            }
+            break;
+        }
+        case 3524:
+        // Marked for Death
+        {
+            if (!roll_chance_i(triggerAmount))
+                return false;
+
+            triggered_spell_id = 88691;
+            target = pVictim;
+            break;
+        }
         // Crouching Tiger, Hidden Chimera
         if (dummySpell->SpellIconID == 4752)
         {
@@ -8515,10 +8534,10 @@ bool Unit::HandleAuraProc (Unit * pVictim, uint32 damage, Aura * triggeredByAura
     case SPELLFAMILY_PRIEST:
     {
         // Masochism
-        if(dummySpell->SpellIconID == 2211)
+        if (dummySpell->SpellIconID == 2211)
         {
             *handled = true;
-            if(!(damage >= CountPctFromMaxHealth(10)))
+            if (!(damage >= CountPctFromMaxHealth(10)))
                 return false;
 
             int32 bp0 = SpellMgr::CalculateSpellEffectAmount(dummySpell, 0);
@@ -8589,35 +8608,35 @@ bool Unit::HandleAuraProc (Unit * pVictim, uint32 damage, Aura * triggeredByAura
         }
         break;
     }
-        case SPELLFAMILY_ROGUE:
-            switch(dummySpell->Id)
-            {
-                // Gouge
-                case 1776:
-                    *handled = true;
-                    // Check so gouge spell effect [1] (SPELL_EFFECT_SCHOOL_DAMAGE) cannot cancel stun effect
-                    if(procSpell && procSpell->Id == 1776)
-                        return false;
-                    return true;
-                break;
-            }
-            break;
-        case SPELLFAMILY_WARRIOR:
+    case SPELLFAMILY_ROGUE:
+        switch (dummySpell->Id)
         {
-            switch (dummySpell->Id)
-            {
-                // Item - Warrior T10 Protection 4P Bonus
-                case 70844:
-                {
-                    int32 basepoints0 = CalculatePctN(GetMaxHealth(), SpellMgr::CalculateSpellEffectAmount(dummySpell, 1));
-                    CastCustomSpell(this, 70845, &basepoints0, NULL, NULL, true);
-                    break;
-                }
-                default:
-                    break;
-            }
+        // Gouge
+        case 1776:
+            *handled = true;
+            // Check so gouge spell effect [1] (SPELL_EFFECT_SCHOOL_DAMAGE) cannot cancel stun effect
+            if (procSpell && procSpell->Id == 1776)
+                return false;
+            return true;
             break;
-        }	
+        }
+        break;
+    case SPELLFAMILY_WARRIOR:
+    {
+        switch (dummySpell->Id)
+        {
+        // Item - Warrior T10 Protection 4P Bonus
+        case 70844:
+        {
+            int32 basepoints0 = CalculatePctN(GetMaxHealth(), SpellMgr::CalculateSpellEffectAmount(dummySpell, 1));
+            CastCustomSpell(this, 70845, &basepoints0, NULL, NULL, true);
+            break;
+        }
+        default:
+            break;
+        }
+        break;
+    }
     }
     return false;
 }
@@ -8918,24 +8937,14 @@ bool Unit::HandleProcTriggerSpell (Unit *pVictim, uint32 damage, AuraEffect* tri
                 basepoints0 += pVictim->GetRemainingDotDamage(GetGUID(), trigger_spell_id);
                 break;
             }
-            if (auraSpellInfo->SpellIconID == 2225)          // Serpent Spread 1, 2
+            // Item - Hunter T9 4P Bonus
+            if (auraSpellInfo->Id == 67151)
             {
-                if (!(auraSpellInfo->procFlags == 0x1140))
-                    return false;
-
-                switch (auraSpellInfo->Id)
-                {
-                case 87934:
-                    trigger_spell_id = 88453;
-                    break;
-                case 87935:
-                    trigger_spell_id = 88466;
-                    break;
-                default:
-                    return false;
-                }
+                trigger_spell_id = 68130;
+                target = this;
                 break;
             }
+            break;
             if (auraSpellInfo->Id == 82661)          // Aspect of the Fox: Focus bonus
             {
                 uint32 basepoints = 0;
@@ -9231,6 +9240,14 @@ bool Unit::HandleProcTriggerSpell (Unit *pVictim, uint32 damage, AuraEffect* tri
             return false;
         break;
     }
+
+        // Hot Streak / Arcane Missiles!
+    case 79684:
+    {
+        if (HasAura(44445))
+            return false;
+        break;
+    }
         // Cheat Death
     case 28845:
     {
@@ -9289,14 +9306,6 @@ bool Unit::HandleProcTriggerSpell (Unit *pVictim, uint32 damage, AuraEffect* tri
             return false;
         break;
     }
-        // Evasive Maneuvers (Commendation of Kael`thas trinket)
-    case 45057:
-    {
-        // reduce you below $s1% health
-        if (GetHealth() - damage > GetMaxHealth() * triggerAmount / 100)
-            return false;
-        break;
-    }
         // Rapid Recuperation
     case 53228:
     case 53232:
@@ -9333,6 +9342,91 @@ bool Unit::HandleProcTriggerSpell (Unit *pVictim, uint32 damage, AuraEffect* tri
     case 72176:
         basepoints0 = 3;
         break;
+        // Professor Putricide - Ooze Spell Tank Protection
+    case 71770:
+        if (pVictim)
+            pVictim->CastSpell(pVictim, trigger_spell_id, true);          // EffectImplicitTarget is self
+        return true;
+        // Evasive Maneuvers (Commendation of Kael`thas trinket)
+    case 45057:
+    {
+        // reduce you below $s1% health
+        if (GetHealth() - damage > GetMaxHealth() * triggerAmount / 100)
+            return false;
+        break;
+    }
+    case 71634:          // Item - Icecrown 25 Normal Tank Trinket 1
+    case 71640:          // Item - Icecrown 25 Heroic Tank Trinket 1
+    case 75475:          // Item - Chamber of Aspects 25 Normal Tank Trinket
+    case 75481:          // Item - Chamber of Aspects 25 Heroic Tank Trinket
+    {
+        // Procs only if damage takes health below $s1%
+        if (!HealthBelowPctDamaged(triggerAmount, damage))
+            return false;
+        break;
+    }
+    case 71761:          // Deep Freeze Immunity State
+    {
+        if (!pVictim->ToCreature())
+            return false;
+
+        if (pVictim->ToCreature()->GetCreatureInfo()->MechanicImmuneMask /*& (1 << (SpellEntry->EffectMechanic[index] - 1))*/)
+            target = pVictim;
+        else
+            return false;
+        break;
+    }
+    case 81135:          // Crimson Scourge Rank 1
+    case 81136:          // Crimson Scourge Rank 2
+    {
+        if (!pVictim->HasAura(55078, GetGUID()))          // Proc only if the target has Blood Plague
+            return false;
+        break;
+    }
+    case 52284:          // Will Of The Necropolis Rank 1
+    case 81163:          // Will Of The Necropolis Rank 2
+    case 81164:          // Will Of The Necropolis Rank 3
+    {
+        if (GetTypeId() != TYPEID_PLAYER)
+            return false;
+
+        if (cooldown && ToPlayer()->HasSpellCooldown(96171))
+            return false;
+
+        if (!HealthBelowPctDamaged(30, damage))          // Only proc if it brings us below 30% health
+            return false;
+
+        ToPlayer()->RemoveSpellCooldown(48982, true);          // Remove cooldown of rune tap
+        CastSpell(this, 96171, true);          // next rune tap wont cost runes
+
+        if (cooldown)
+            ToPlayer()->AddSpellCooldown(96171, NULL, time(NULL) + cooldown);
+
+        break;
+    }
+        // Sudden Doom
+    case 49018:
+    case 49529:
+    case 49530:
+    {
+        if (GetTypeId() != TYPEID_PLAYER)
+            return false;
+
+        // Select chance based on weapon speed
+        float speed = ToPlayer()->GetWeaponForAttack(BASE_ATTACK)->GetProto()->Delay / 1000;
+
+        int32 modifier = 1;
+
+        if (auraSpellInfo->Id == 49530)          // Rank 3
+            modifier = 4;
+        else if (auraSpellInfo->Id == 49529)          // Rank 2
+            modifier = 3;
+
+        // ToDo: Check this, its based on a wowhead comment
+        if (!roll_chance_f(speed * modifier))
+            return false;
+        break;
+    }
     case 15337:          // Improved Spirit Tap (Rank 1)
     case 15338:          // Improved Spirit Tap (Rank 2)
     {
@@ -11881,7 +11975,7 @@ bool Unit::isSpellCrit (Unit *pVictim, SpellEntry const *spellProto, SpellSchool
                 // Mind Spike
                 if (spellProto->SpellFamilyFlags[0] & 0x2000 && spellProto->SpellIconID == 95)
                     if (AuraEffect const* aurEff = pVictim->GetAuraEffect(87178, 0, GetGUID()))
-                            crit_chance += aurEff->GetAmount();
+                        crit_chance += aurEff->GetAmount();
                 break;
             case SPELLFAMILY_MAGE:
                 // Glyph of Fire Blast

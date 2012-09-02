@@ -6478,8 +6478,8 @@ bool Player::UpdateCraftSkill (uint32 spellid)
                     learnSpell(discoveredSpell, false);
             }
 
-            //uint32 SkillGainPoints = _spell_idx->second->characterPoints[0];
-            uint32 craft_skill_gain = /*SkillGainPoints * */ sWorld->getIntConfig(CONFIG_SKILL_GAIN_CRAFTING);
+            uint32 SkillGainPoints = _spell_idx->second->characterPoints[0];
+            uint32 craft_skill_gain = SkillGainPoints * sWorld->getIntConfig(CONFIG_SKILL_GAIN_CRAFTING);
 
             return UpdateSkillPro(_spell_idx->second->skillId, SkillGainChance(SkillValue, _spell_idx->second->max_value, (_spell_idx->second->max_value + _spell_idx->second->min_value) / 2, _spell_idx->second->min_value), craft_skill_gain);
         }
@@ -7676,7 +7676,7 @@ bool Player::RewardHonor (Unit *uVictim, uint32 groupsize, int32 honor, bool pvp
     GetSession()->SendPacket(&data);
 
     // add honor points
-    ModifyCurrency(CURRENCY_TYPE_HONOR_POINTS, int32(honor) * 2.4);
+    AddHonorPoints(int32(honor));
 
     //ApplyModUInt32Value(PLAYER_FIELD_TODAY_CONTRIBUTION, honor, true);
 
@@ -7710,6 +7710,67 @@ bool Player::RewardHonor (Unit *uVictim, uint32 groupsize, int32 honor, bool pvp
 
     return true;
 }
+
+void Player::AddHonorPoints(int32 count)
+{
+    ModifyCurrency(CURRENCY_TYPE_HONOR_POINTS, count);
+}
+
+void Player::ModifyHonorPoints(int32 count)
+{
+    SetCurrency(CURRENCY_TYPE_HONOR_POINTS, count);
+}
+
+void Player::ResetHonorPoints()
+{
+    ResetCurrencyDatas(CURRENCY_TYPE_HONOR_POINTS);
+}
+
+void Player::AddConquestPoints(int32 count)
+{
+    ModifyCurrency(CURRENCY_TYPE_CONQUEST_POINTS, count);
+}
+
+void Player::ModifyConquestPoints(int32 count)
+{
+    SetCurrency(CURRENCY_TYPE_CONQUEST_POINTS, count);
+}
+
+void Player::ResetConquestPoints()
+{
+    ResetCurrencyDatas(CURRENCY_TYPE_CONQUEST_POINTS);
+}
+
+void Player::AddValorPoints(int32 count)
+{
+    ModifyCurrency(CURRENCY_TYPE_VALOR_POINTS, count);
+}
+
+void Player::ModifyValorPoints(int32 count)
+{
+    SetCurrency(CURRENCY_TYPE_VALOR_POINTS, count);
+}
+
+void Player::ResetValorPoints()
+{
+    ResetCurrencyDatas(CURRENCY_TYPE_VALOR_POINTS);
+}
+
+void Player::AddJusticePoints(int32 count)
+{
+    ModifyCurrency(CURRENCY_TYPE_JUSTICE_POINTS, count);
+}
+
+void Player::ModifyJusticePoints(int32 count)
+{
+    SetCurrency(CURRENCY_TYPE_JUSTICE_POINTS, count);
+}
+
+void Player::ResetJusticePoints()
+{
+    ResetCurrencyDatas(CURRENCY_TYPE_JUSTICE_POINTS);
+}
+
 
 uint32 Player::GetGuildIdFromDB (uint64 guid)
 {
@@ -22057,6 +22118,9 @@ inline void BeforeVisibilityDestroy<Creature> (Creature* t, Player* p)
 
 void Player::UpdateVisibilityOf (WorldObject* target)
 {
+    if (!target)
+        return;
+
     if (HaveAtClient(target))
     {
         if (!canSeeOrDetect(target, false, true))
@@ -22880,6 +22944,32 @@ void Player::ResetCurrencyWeekCap ()
         arenaTeam->SaveToDB();
         arenaTeam->NotifyStatsChanged();
     }
+}
+
+void Player::ResetCurrencyDatas(uint32 id)
+{
+    const CurrencyTypesEntry* currency = sCurrencyTypesStore.LookupEntry(id);
+    ASSERT(currency);
+
+    PlayerCurrenciesMap::iterator itr = m_currencies.find(id);
+    if (itr != m_currencies.end())
+	{
+		itr->second.totalCount = 0;
+		itr->second.weekCount = 0;
+
+		if (itr->second.state != PLAYERCURRENCY_NEW)
+			itr->second.state = PLAYERCURRENCY_CHANGED;
+
+		// probably excessive checks
+		if (IsInWorld() && !GetSession()->PlayerLoading())
+		{
+			WorldPacket packet(SMSG_UPDATE_CURRENCY, 12);
+			packet << uint32(CURRENCY_TYPE_HONOR_POINTS);
+			packet << uint32(0);
+			packet << uint32(0);
+			GetSession()->SendPacket(&packet);
+		}
+	}
 }
 
 void Player::UpdateMaxWeekRating (ConquestPointsSources source, uint8 slot)
@@ -25214,6 +25304,9 @@ void Player::_SaveEquipmentSets (SQLTransaction& trans)
 
 void Player::_SaveBGData (SQLTransaction& trans)
 {
+    if (!MapManager::IsValidMapCoord(m_bgData.joinPos.GetMapId(), m_bgData.joinPos.GetPositionX(), m_bgData.joinPos.GetPositionY(), m_bgData.joinPos.GetPositionZ()))
+        return;
+		
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_PLAYER_BGDATA);
     stmt->setUInt32(0, GetGUIDLow());
     trans->Append(stmt);
