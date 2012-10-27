@@ -1361,11 +1361,6 @@ void AddBattlegroundScripts ()
 #endif
 }
 
-#ifdef SCRIPTS
-/* This is where custom scripts' loading functions should be declared. */
-
-#endif
-
 void AddCustomScripts ()
 {
 #ifdef SCRIPTS
