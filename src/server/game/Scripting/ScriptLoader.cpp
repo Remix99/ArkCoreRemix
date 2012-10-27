@@ -1361,8 +1361,6 @@ void AddBattlegroundScripts ()
 #endif
 }
 
-void AddCustomScripts ()
-{
 #ifdef SCRIPTS
 /* This is where custom scripts' loading functions should be declared. */
 void AddSC_Gossip_CheckCombat();
@@ -1371,7 +1369,8 @@ void AddSC_Title_NPC();
 void AddSC_System_OnPVPKill();
 #endif
 
-void AddCustomScripts() {
+void AddCustomScripts ()
+{
 #ifdef SCRIPTS
     /* This is where custom scripts should be added. */
     AddSC_Gossip_CheckCombat();
