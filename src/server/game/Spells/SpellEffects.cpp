@@ -21,6 +21,7 @@
  */
 
 #include "gamePCH.h"
+#include "AnticheatMgr.h"
 #include "Common.h"
 #include "DatabaseEnv.h"
 #include "WorldPacket.h"
@@ -702,7 +703,7 @@ void Spell::SpellDamageSchoolDmg (SpellEffIndex effIndex)
             case 589:
             case 15407:
             {
-                if (m_caster->HasSpell(95740))          // Shadow Orbs
+                if (m_caster->ToPlayer()->GetTalentBranchSpec(m_caster->ToPlayer()->GetActiveSpec()) == BS_PRIEST_SHADOW)         // Shadow Orbs
                 {
                     int chance = 10;
                     if (m_caster->HasAura(33191))
@@ -2421,6 +2422,27 @@ void Spell::EffectTriggerSpell (SpellEffIndex effIndex)
     // special cases
     switch (triggered_spell_id)
     {
+    // Tricky Treat / Out With It
+    case 42965:
+    {
+        int32 rand_eff = urand(1, 7);
+        switch (rand_eff)
+        {
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+                m_caster->CastSpell(m_caster, 42919, true);
+                break;
+            case 7:
+                m_caster->CastSpell(m_caster, 42966, true);
+                if (AchievementEntry const* pAE = GetAchievementStore()->LookupEntry(288)) // OUT WITH IT
+                    m_caster->ToPlayer()->CompletedAchievement(pAE, true);
+                break;
+        }
+    }
     // Mirror Image
     case 58832:
     {
@@ -7323,6 +7345,9 @@ void Spell::EffectCharge (SpellEffIndex /*effIndex*/)
     Unit* target = m_targets.getUnitTarget();
     if (!target)
         return;
+        
+    if (m_caster->ToPlayer())
+        sAnticheatMgr->DisableAnticheatDetection(m_caster->ToPlayer());
 
     float angle = target->GetRelativeAngle(m_caster);
     Position pos;
@@ -7341,11 +7366,14 @@ void Spell::EffectChargeDest (SpellEffIndex /*effIndex*/)
 {
     if (m_targets.HasDst())
     {
-            float x, y, z;
-            m_targets.m_dstPos.GetPosition(x, y, z);
-            m_caster->GetMotionMaster()->MoveCharge(x, y, z);
-        }
+        if (m_caster->ToPlayer())
+            sAnticheatMgr->DisableAnticheatDetection(m_caster->ToPlayer());
+            
+        float x, y, z;
+        m_targets.m_dstPos.GetPosition(x, y, z);
+        m_caster->GetMotionMaster()->MoveCharge(x, y, z);
     }
+}
 
 void Spell::EffectKnockBack (SpellEffIndex effIndex)
 {

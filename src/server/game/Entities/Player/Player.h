@@ -999,6 +999,18 @@ private:
     uint32 _xp;
 };
 
+struct AnticheatData
+{
+    uint32 lastOpcode;
+    MovementInfo lastMovementInfo;
+    bool disableACCheck;
+    uint32 disableACCheckTimer;
+    uint32 total_reports;
+    uint32 type_reports[5];
+    uint32 average;
+    uint64 creation_time;
+};
+
 class Player: public Unit, public GridObject<Player>
 {
     friend class WorldSession;
@@ -1008,6 +1020,8 @@ public:
     explicit Player (WorldSession *session);
     explicit Player (WorldSession &);
     ~Player ();
+
+	AnticheatData anticheatData;
 
     void CleanupsBeforeDelete (bool finalCleanup = true);
 
@@ -2916,6 +2930,7 @@ protected:
     uint32 m_AreaID;
     uint32 m_regenTimerCount;
     uint32 m_holyPowerRegenTimerCount;          // Holy power updates ticks at every 10s thats wy we need this.
+	uint32 m_focusRegenTimerCount; 				// Focus power updates ticks at every second.
     float m_powerFraction[MAX_POWERS];
     uint32 m_contestedPvPTimer;
 

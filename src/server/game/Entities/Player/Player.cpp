@@ -21,6 +21,7 @@
  */
 
 #include "gamePCH.h"
+#include "AnticheatMgr.h"
 #include "Common.h"
 #include "Object.h"
 #include "Language.h"
@@ -79,6 +80,7 @@
 #include "InstanceScript.h"
 #include <cmath>
 #include "OutdoorPvPWG.h"
+#include "ArkChat/IRCClient.h"
 
 #define ZONE_UPDATE_INTERVAL (1*IN_MILLISECONDS)
 
@@ -643,6 +645,19 @@ Player::Player (WorldSession *session) :
 #pragma warning(default:4355)
 #endif
 
+    anticheatData.disableACCheck = false;
+    anticheatData.disableACCheckTimer = 0;
+    GetPosition(&anticheatData.lastMovementInfo.pos);
+    anticheatData.lastOpcode = 0;
+
+    anticheatData.total_reports = 0;
+
+    for (uint8 i = 0; i < 5; i++)
+        anticheatData.type_reports[i] = 0;
+
+    anticheatData.average = 0;
+    anticheatData.creation_time = 0;
+    
     m_speakTime = 0;
     m_speakCount = 0;
 
@@ -880,6 +895,8 @@ Player::Player (WorldSession *session) :
     m_ConditionErrorMsgId = 0;
 
     SetPendingBind(NULL, 0);
+
+	sAnticheatMgr->DeletePlayerReport(this);
 }
 
 Player::Player (WorldSession &session) :
@@ -1124,12 +1141,14 @@ Player::Player (WorldSession &session) :
     m_globalCooldowns.clear();
 
     m_ConditionErrorMsgId = 0;
-
+  
     SetPendingBind(NULL, 0);
 }
 
 Player::~Player ()
 {
+    sAnticheatMgr->DeletePlayerReport(this);
+    
     // it must be unloaded already in PlayerLogout and accessed only for logged in player
     //m_social = NULL;
 
@@ -1342,19 +1361,6 @@ bool Player::Create (uint32 guidlow, const std::string& name, uint8 race, uint8 
         UpdateMaxPower(POWER_MANA);          // Update max Mana (for add bonus from intellect)
         SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
     }
-
-    //if (getPowerType() == POWER_RUNIC_POWER)
-    //{
-    //    SetPower(POWER_RUNE, 8);
-    //    SetMaxPower(POWER_RUNE, 8);
-    //    SetPower(POWER_RUNIC_POWER, 0);
-    //    SetMaxPower(POWER_RUNIC_POWER, 1000);
-    //}
-    //if (getPowerType() == POWER_FOCUS)
-    //{
-    //    SetPower(POWER_FOCUS, 100);
-    //    SetMaxPower(POWER_FOCUS, 100);
-    //}
 
     if (getPowerType() != POWER_MANA)          // hide additional mana bar if we have no mana
     {
@@ -1787,7 +1793,9 @@ void Player::Update (uint32 p_time)
     if (!IsInWorld())
         return;
 
-    // undelivered mail
+    sAnticheatMgr->HandleHackDetectionTimer(this, p_time);
+	
+	// undelivered mail
     if (m_nextMailDelivereTime && m_nextMailDelivereTime <= time(NULL))
     {
         SendNewMail();
@@ -2392,6 +2400,8 @@ void Player::TeleportOutOfMap (Map *oldMap)
 
 bool Player::TeleportTo (uint32 mapid, float x, float y, float z, float orientation, uint32 options)
 {
+    sAnticheatMgr->DisableAnticheatDetection(this,true);
+    
     if (!MapManager::IsValidMapCoord(mapid, x, y, z, orientation))
     {
         sLog->outError("TeleportTo: invalid map (%d) or invalid coordinates (X: %f, Y: %f, Z: %f, O: %f) given when teleporting player (GUID: %u, name: %s, map: %d, X: %f, Y: %f, Z: %f, O: %f).", mapid, x, y, z, orientation, GetGUIDLow(), GetName(), GetMapId(), GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation());
@@ -2709,6 +2719,22 @@ void Player::AddToWorld ()
     for (uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
         if (m_items[i])
             m_items[i]->AddToWorld();
+
+	//ARKCHAT AUTO JOIN CHANNEL
+	if(sIRC.ajoin == 1)
+	{
+		//QueryResult result = WorldDatabase.PQuery("SELECT `name` FROM `IRC_Inchan` WHERE `name` = '%s'", Unit::GetName());
+		QueryResult result = WorldDatabase.PQuery("SELECT `name` FROM `IRC_Inchan` WHERE `guid` = '%d'", GetSession()->GetPlayer()->GetGUID());
+		if(!result)
+		{
+			// prevent invite spam
+			sIRC.AutoJoinChannel(this);
+			std::string pname = Unit::GetName();
+			std::string Channel = "world";
+			std::string query = "INSERT INTO `IRC_Inchan` VALUES (%d,'"+pname+"','"+Channel+"')";
+			WorldDatabase.PExecute(query.c_str(), GetSession()->GetPlayer()->GetGUID());
+		}
+	}
 }
 
 void Player::RemoveFromWorld ()
@@ -2745,51 +2771,70 @@ void Player::RemoveFromWorld ()
             SetViewpoint(viewpoint, false);
         }
     }
+
+	//ARKCHAT AUTO JOIN CHANNEL clecn up inchan table :)
+	if(sIRC.ajoin == 1 && GetSession()->PlayerLogout())
+		WorldDatabase.PExecute("DELETE FROM `IRC_Inchan` WHERE `guid` = '%d'", GetSession()->GetPlayer()->GetGUID());
 }
 
-void Player::RegenerateAll ()
+void Player::RegenerateAll()
 {
-    //if (m_regenTimer <= 500)
+    //if (_regenTimer <= 500)
     //    return;
 
     m_regenTimerCount += m_regenTimer;
+
     if (getClass() == CLASS_PALADIN)
         m_holyPowerRegenTimerCount += m_regenTimer;
 
-    Regenerate(POWER_ENERGY);
+    if (getClass() == CLASS_HUNTER)
+        m_focusRegenTimerCount += m_regenTimer;
 
+    Regenerate(POWER_ENERGY);
     Regenerate(POWER_MANA);
 
     // Runes act as cooldowns, and they don't need to send any data
     if (getClass() == CLASS_DEATH_KNIGHT)
-        for (uint32 i = 0; i < MAX_RUNES; i += 2)
+    {
+        for (uint8 i = 0; i < MAX_RUNES; i += 2)
         {
-            uint32 cd1 = GetRuneCooldown(i);
-            uint32 cd2 = GetRuneCooldown(i + 1);
+            uint8 runeToRegen = i;
+            uint32 cd = GetRuneCooldown(i);
+            uint32 secondRuneCd = GetRuneCooldown(i + 1);
+            // Regenerate second rune of the same type only after first rune is off the cooldown
+            if (secondRuneCd && (cd > secondRuneCd || !cd))
+            {
+                runeToRegen = i + 1;
+                cd = secondRuneCd;
+            }
 
-            if (cd1 && (!cd2 || cd1 <= cd2))
-                SetRuneCooldown(i, (cd1 > m_regenTimer) ? cd1 - m_regenTimer : 0);
-            else if (cd2)
-                SetRuneCooldown(i + 1, (cd2 > m_regenTimer) ? cd2 - m_regenTimer : 0);
+            if (cd)
+                SetRuneCooldown(runeToRegen, (cd > m_regenTimer) ? cd - m_regenTimer : 0);
         }
+    }
 
     if (m_regenTimerCount >= 2000)
     {
         // Not in combat or they have regeneration
-        if (!isInCombat() || HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) || HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT) || IsPolymorphed())
+        if (!isInCombat() || IsPolymorphed() || m_baseHealthRegen ||
+            HasAuraType(SPELL_AURA_MOD_REGEN_DURING_COMBAT) ||
+            HasAuraType(SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT))
         {
             RegenerateHealth();
         }
 
         Regenerate(POWER_RAGE);
-        if (getClass() == CLASS_PALADIN)
-            Regenerate(POWER_HOLY_POWER);
+
         if (getClass() == CLASS_DEATH_KNIGHT)
             Regenerate(POWER_RUNIC_POWER);
-        if (getClass() == CLASS_HUNTER)
-            Regenerate(POWER_FOCUS);
 
         m_regenTimerCount -= 2000;
+    }
+
+    if (m_focusRegenTimerCount >= 1000 && getClass() == CLASS_HUNTER)
+    {
+        Regenerate(POWER_FOCUS);
+        m_focusRegenTimerCount -= 1000;
     }
 
     if (m_holyPowerRegenTimerCount >= 10000 && getClass() == CLASS_PALADIN)
@@ -2801,9 +2846,10 @@ void Player::RegenerateAll ()
     m_regenTimer = 0;
 }
 
-void Player::Regenerate (Powers power)
+void Player::Regenerate(Powers power)
 {
     uint32 maxValue = GetMaxPower(power);
+
     if (!maxValue)
         return;
 
@@ -2816,61 +2862,65 @@ void Player::Regenerate (Powers power)
     float addvalue = 0.0f;
 
     //powers now benefit from haste.
-    float haste = (2 - GetFloatValue(UNIT_MOD_CAST_SPEED));
+    // 1) Hunter's focus
+    float rangedHaste = GetFloatValue(PLAYER_FIELD_MOD_RANGED_HASTE);
+    // 2) Rogue's Energy
+    float meleeHaste = GetFloatValue(PLAYER_FIELD_MOD_HASTE);
+    // 3) Mana regen
+    float spellHaste = GetFloatValue(UNIT_MOD_CAST_SPEED);
 
     switch (power)
     {
-    case POWER_MANA:
-    {
-        float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
+        case POWER_MANA:
+        {
+            bool recentCast = IsUnderLastManaUseEffect();
+            float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
 
-        if (getLevel() < 15)
-            ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA) * (2.066f - (getLevel() * 0.066f));
+            if (getLevel() < 15)
+                ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA) * (2.066f - (getLevel() * 0.066f));
 
-        if (isInCombat())          // Trinity updates Mana in intervals of 2s, which is correct
-            addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) * ManaIncreaseRate * 0.001f * m_regenTimer * haste;
-        else
-            addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * ManaIncreaseRate * 0.001f * m_regenTimer * haste;
-    }
-        break;
-    case POWER_RAGE:          // Regenerate rage
-    {
-        if (!isInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
-        {
-            float RageDecreaseRate = sWorld->getRate(RATE_POWER_RAGE_LOSS);
-            addvalue += -20 * RageDecreaseRate / haste;          // 2 rage by tick (= 2 seconds => 1 rage/sec)
+            if (recentCast) // SkyFire Updates Mana in intervals of 2s, which is correct
+                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) *  ((0.001f * m_regenTimer) + CalculatePctF(0.001f, spellHaste)) * ManaIncreaseRate;
+            else
+                addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) *  ((0.001f * m_regenTimer) + CalculatePctF(0.001f, spellHaste)) * ManaIncreaseRate;
+            break;
         }
-    }
-        break;
-    case POWER_FOCUS:
-        addvalue = 12 * haste;
-        break;
-    case POWER_HOLY_POWER:
-    {
-        if (!isInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
+        case POWER_RAGE:                                                  // Regenerate rage
         {
-            addvalue += -1;
+            if (!isInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
+            {
+                float RageDecreaseRate = sWorld->getRate(RATE_POWER_RAGE_LOSS);
+                addvalue += -20 * RageDecreaseRate / meleeHaste;               // 2 rage by tick (= 2 seconds => 1 rage/sec)
+            }
+            break;
         }
-        break;
-    }
-    case POWER_ENERGY:          // Regenerate energy (rogue)
-        addvalue += 0.01f * m_regenTimer * haste * sWorld->getRate(RATE_POWER_ENERGY);
-        break;
-    case POWER_RUNIC_POWER:
-    {
-        if (!isInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
+        case POWER_FOCUS:
+            addvalue += (6.0f + CalculatePctF(6.0f, rangedHaste)) * sWorld->getRate(RATE_POWER_FOCUS);
+            break;
+        case POWER_HOLY_POWER:                                           // Regenerate holy power
         {
-            float RunicPowerDecreaseRate = sWorld->getRate(RATE_POWER_RUNICPOWER_LOSS);
-            addvalue += -30 * RunicPowerDecreaseRate;          // 3 RunicPower by tick
+            if (!isInCombat())
+                addvalue += -1.0f;                                       // remove 1 each 10 sec
+            break;
         }
-    }
-        break;
-    case POWER_RUNE:
-    case POWER_HAPPINESS:
-    case POWER_HEALTH:
-        break;
-    default:
-        break;
+        case POWER_ENERGY:                                               // Regenerate energy (rogue)
+            addvalue += ((0.01f * m_regenTimer) + CalculatePctF(0.01f, meleeHaste)) * sWorld->getRate(RATE_POWER_ENERGY);
+            break;
+        case POWER_RUNIC_POWER:
+        {
+            if (!isInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
+            {
+                float RunicPowerDecreaseRate = sWorld->getRate(RATE_POWER_RUNICPOWER_LOSS);
+                addvalue += -30 * RunicPowerDecreaseRate;                // 3 RunicPower by tick
+            }
+            break;
+        }
+        case POWER_RUNE:
+        case POWER_HAPPINESS:
+        case POWER_HEALTH:
+            break;
+        default:
+            break;
     }
 
     // Mana regen calculated in Player::UpdateManaRegen()
@@ -2879,7 +2929,7 @@ void Player::Regenerate (Powers power)
         AuraEffectList const& ModPowerRegenPCTAuras = GetAuraEffectsByType(SPELL_AURA_MOD_POWER_REGEN_PERCENT);
         for (AuraEffectList::const_iterator i = ModPowerRegenPCTAuras.begin(); i != ModPowerRegenPCTAuras.end(); ++i)
             if (Powers((*i)->GetMiscValue()) == power)
-                addvalue *= ((*i)->GetAmount() + 100) / 100.0f;
+                AddPctN(addvalue, (*i)->GetAmount());
 
         // Butchery requires combat for this effect
         if (power != POWER_RUNIC_POWER || isInCombat())
@@ -2927,7 +2977,7 @@ void Player::Regenerate (Powers power)
         else
             m_powerFraction[power] = addvalue - integerValue;
     }
-    if (m_regenTimerCount >= 2000 || m_holyPowerRegenTimerCount >= 10000)
+    if (m_regenTimerCount >= 2000)
         SetPower(power, curValue);
     else
         UpdateUInt32Value(UNIT_FIELD_POWER1 + power, curValue);
@@ -3408,6 +3458,16 @@ void Player::GiveLevel (uint8 level)
     InitGlyphsForLevel();
 
     UpdateAllStats();
+
+	if ((sIRC.BOTMASK & 256) != 0)
+	{
+		char  temp [5];
+		sprintf(temp, "%u", level);
+		std::string plevel = temp;		
+		std::string pname = GetName();
+		sIRC.Send_IRC_Channels("\00311["+pname+"] : Has Reached Level: "+plevel);
+	}
+
 
     if (sWorld->getBoolConfig(CONFIG_ALWAYS_MAXSKILL))          // Max weapon skill when leveling up
         UpdateSkillsToMaxSkillsForLevel();
@@ -7531,7 +7591,7 @@ void Player::UpdateHonorFields ()
     {
         time_t yesterday = today - DAY;
 
-        uint16 kills_today = PAIR32_LOPART(GetUInt32Value(PLAYER_FIELD_KILLS));
+        uint16 kills_today = GetUInt16Value(PLAYER_FIELD_KILLS, 0);
 
         // update yesterday's contribution
         if (m_lastHonorUpdateTime >= yesterday)
@@ -7539,8 +7599,8 @@ void Player::UpdateHonorFields ()
             //SetUInt32Value(PLAYER_FIELD_YESTERDAY_CONTRIBUTION, GetUInt32Value(PLAYER_FIELD_TODAY_CONTRIBUTION));
 
             // this is the first update today, reset today's contribution
-            //SetUInt32Value(PLAYER_FIELD_TODAY_CONTRIBUTION, 0);
-            SetUInt32Value(PLAYER_FIELD_KILLS, MAKE_PAIR32(0, kills_today));
+            SetUInt16Value(PLAYER_FIELD_KILLS, 0, 0);
+            SetUInt16Value(PLAYER_FIELD_KILLS, 1, kills_today);
         }
         else
         {
@@ -17549,9 +17609,9 @@ bool Player::_LoadFromDB (uint32 guid, SQLQueryHolder * holder, PreparedQueryRes
             SetArenaTeamInfoField(arena_slot, ArenaTeamInfoType(j), 0);
     }
 
-    SetUInt32Value(PLAYER_FIELD_LIFETIME_HONORABLE_KILLS, fields[45].GetUInt32());
-    SetUInt16Value(PLAYER_FIELD_KILLS, 0, fields[46].GetUInt16());
-    SetUInt16Value(PLAYER_FIELD_KILLS, 1, fields[47].GetUInt16());
+    SetUInt32Value(PLAYER_FIELD_LIFETIME_HONORABLE_KILLS, fields[43].GetUInt32());
+    SetUInt16Value(PLAYER_FIELD_KILLS, 0, fields[44].GetUInt16());
+    SetUInt16Value(PLAYER_FIELD_KILLS, 1, fields[45].GetUInt16());
 
     _LoadBoundInstances(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOADBOUNDINSTANCES));
     _LoadInstanceTimeRestrictions(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOADINSTANCELOCKTIMES));
@@ -22296,9 +22356,9 @@ void Player::ModifyMoney (int32 d)
 
                         pGuild->SetGuildMoney(GuildMoney);
                     }
+                this->SendPlayerMoneyNotify(this, d, GetGuildMoneyModifier());
                 }
             }
-            this->SendPlayerMoneyNotify(this, d, GetGuildMoneyModifier());
         }
         else
         {
