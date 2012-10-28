@@ -4,6 +4,7 @@ set(scripts_STAT_SRCS
     Custom/Npc_Beastmaster.cpp
     Custom/Title_NPC.cpp
     Custom/pvp_System.cpp
+    Custom/NPC_Transmogrify.cpp
 )
 
 message("  -> Prepared: Custom")
