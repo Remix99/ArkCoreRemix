@@ -190,6 +190,8 @@ void AnticheatMgr::FlyHackDetection(Player* player, MovementInfo movementInfo)
     if (
         player->HasAura(34480) || // GRAVITY_LAPSE
         player->HasAura(39432) || // GRAVITY_LAPSE_AURA
+        player->HasAura(33943) || // Flight Form
+        player->HasAura(40120) || // Swift Flight Form
         player->HasAura(44227) // GRAVITY_LAPSE_FLY
         )
         return;        
@@ -312,6 +314,10 @@ void AnticheatMgr::SpeedHackDetection(Player* player,MovementInfo movementInfo)
         player->HasAura(13141) ||  // 13141 -> Gnomish Rocket Boots
         player->HasAura(8892)  ||  // 8892 -> Goblin Rocket Boots
         player->HasAura(51721) ||  // 51721 -> Dominion Over Acherus
+        player->HasAura(51721) ||  // 51721 -> Rocket Jump
+        player->HasAura(68992) ||  // 68992 -> Darkflight
+        player->HasAura(1850)  ||   // 1850 -> Dash
+        player->HasAura(2983)  ||   // 2983 -> Sprint
         player->HasAura(87840)     // 87840 -> Running Wild
         // this isnt good, need way to work out speed of these auras instead of just skipping ppl with them.
         )
