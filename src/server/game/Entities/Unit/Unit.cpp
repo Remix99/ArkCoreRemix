@@ -4694,6 +4694,25 @@ int32 Unit::GetMaxNegativeAuraModifierByAffectMask (AuraType auratype, SpellEntr
     return modifier;
 }
 
+void Unit::SendAuraVisualForSelf(bool apply, uint32 id, uint8 effmask)
+{
+    WorldPacket data(SMSG_AURA_UPDATE);
+    data.append(GetPackGUID());
+    // use always free 64+ slots
+    data << uint8(MAX_AURAS);
+    if (!apply)
+    {
+        data << uint32(0);
+        SendMessageToSet(&data, true);
+        return;
+    }
+    data << uint32(id);
+    data << uint8(AFLAG_CASTER | AFLAG_POSITIVE | effmask);
+    data << uint8(getLevel());
+    data << uint8(1);
+    SendMessageToSet(&data, true);
+}
+
 void Unit::_RegisterDynObject (DynamicObject* dynObj)
 {
     m_dynObj.push_back(dynObj);
@@ -8460,30 +8479,6 @@ bool Unit::HandleAuraProc (Unit * pVictim, uint32 damage, Aura * triggeredByAura
     }
     case SPELLFAMILY_MAGE:
     {
-        // Improved Polymorph
-        case 118:
-        {
-            *handled = true; 
-            Unit* caster = triggeredByAura->GetCaster();
-
-            if (!caster || !pVictim)
-                return false;
-            // Rank 1          // Cooldown Marker
-            if (caster->HasAura(11210) && !pVictim->HasAura(87515, caster->GetGUID()))
-            {
-                CastSpell(this,83046,true,NULL,NULL,caster->GetGUID()); // 1.5s stun
-                CastSpell(this,87515,true,NULL,NULL,caster->GetGUID()); // Cooldown marker
-                return true;
-            }           
-            // Rank 2
-            if (caster->HasAura(12592) && !this->HasAura(87515, caster->GetGUID()))
-            {
-            CastSpell(this,83047,true,NULL,NULL,caster->GetGUID()); // 3s stun
-            CastSpell(this,87515,true,NULL,NULL,caster->GetGUID()); // Cooldown marker
-            return true;
-            }
-        break;
-        }
         // Combustion
         switch (dummySpell->Id)
         {
