@@ -176,7 +176,7 @@ enum ActionButtonUpdateState
 enum ActionButtonType
 {
     ACTION_BUTTON_SPELL = 0x00, ACTION_BUTTON_C = 0x01,          // click?
-    ACTION_BUTTON_EQSET = 0x20, ACTION_BUTTON_MACRO = 0x40, ACTION_BUTTON_CMACRO = ACTION_BUTTON_C | ACTION_BUTTON_MACRO, ACTION_BUTTON_ITEM = 0x80
+    ACTION_BUTTON_EQSET = 0x20, ACTION_BUTTON_MACRO = 0x40, ACTION_BUTTON_CMACRO = ACTION_BUTTON_C | ACTION_BUTTON_MACRO, ACTION_BUTTON_ITEM = 0x80, ACTION_PETLIST = 0x30
 };
 
 #define ACTION_BUTTON_ACTION(X) (uint32(X) & 0x00FFFFFF)
@@ -1021,7 +1021,7 @@ public:
     explicit Player (WorldSession &);
     ~Player ();
 
-	AnticheatData anticheatData;
+    AnticheatData anticheatData;
 
     void CleanupsBeforeDelete (bool finalCleanup = true);
 
@@ -1542,7 +1542,7 @@ public:
     void ResetWeeklyQuestStatus ();
 
     void ResetCurrencyWeekCap ();
-	void ResetCurrencyDatas(uint32 id);
+    void ResetCurrencyDatas(uint32 id);
     void UpdateMaxWeekRating (ConquestPointsSources source, uint8 slot);
 
     uint16 FindQuestSlot (uint32 quest_id) const;
@@ -2930,7 +2930,7 @@ protected:
     uint32 m_AreaID;
     uint32 m_regenTimerCount;
     uint32 m_holyPowerRegenTimerCount;          // Holy power updates ticks at every 10s thats wy we need this.
-	uint32 m_focusRegenTimerCount; 				// Focus power updates ticks at every second.
+    uint32 m_focusRegenTimerCount;                 // Focus power updates ticks at every second.
     float m_powerFraction[MAX_POWERS];
     uint32 m_contestedPvPTimer;
 
