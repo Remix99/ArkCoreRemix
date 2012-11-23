@@ -24,6 +24,7 @@
 
 #include "gamePCH.h"
 #include <ace/Auto_Ptr.h>
+
 #include "../../../scripts/Custom/Transmogrification.h"
 #include "Common.h"
 #include "Item.h"
