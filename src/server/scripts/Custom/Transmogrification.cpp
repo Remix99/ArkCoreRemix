@@ -137,8 +137,8 @@ public:
                 }
             }
         }
-        player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, session->GetTrinityString(LANG_OPTION_REMOVE_ALL), EQUIPMENT_SLOT_END+2, 0, session->GetTrinityString(LANG_POPUP_REMOVE_ALL), 0, false);
-        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TALK, session->GetTrinityString(LANG_OPTION_UPDATE_MENU), EQUIPMENT_SLOT_END+1, 0);
+        player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, session->GetArkCoreString(LANG_OPTION_REMOVE_ALL), EQUIPMENT_SLOT_END+2, 0, session->GetArkCoreString(LANG_POPUP_REMOVE_ALL), 0, false);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TALK, session->GetArkCoreString(LANG_OPTION_UPDATE_MENU), EQUIPMENT_SLOT_END+1, 0);
         player->SEND_GOSSIP_MENU(DEFAULT_GOSSIP_MESSAGE, creature->GetGUID());
         return true;
     }
@@ -179,7 +179,7 @@ public:
                                 {
                                     limit++;
                                     _items[lowGUID][display] = newItem;
-                                    player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, GetItemName(newItem->GetTemplate(), session), uiAction, display, session->GetTrinityString(LANG_POPUP_TRANSMOGRIFY)+GetItemName(newItem->GetTemplate(), session)+tokenCost, price, false);
+                                    player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, GetItemName(newItem->GetTemplate(), session), uiAction, display, session->GetArkCoreString(LANG_POPUP_TRANSMOGRIFY)+GetItemName(newItem->GetTemplate(), session)+tokenCost, price, false);
                                 }
                             }
                         }
@@ -202,7 +202,7 @@ public:
                                         {
                                             limit++;
                                             _items[lowGUID][display] = newItem;
-                                            player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, GetItemName(newItem->GetTemplate(), session), uiAction, display, session->GetTrinityString(LANG_POPUP_TRANSMOGRIFY)+GetItemName(newItem->GetTemplate(), session)+tokenCost, price, false);
+                                            player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, GetItemName(newItem->GetTemplate(), session), uiAction, display, session->GetArkCoreString(LANG_POPUP_TRANSMOGRIFY)+GetItemName(newItem->GetTemplate(), session)+tokenCost, price, false);
                                         }
                                     }
                                 }
@@ -211,9 +211,9 @@ public:
                     }
 
                     char removeOnePopup[250];
-                    snprintf(removeOnePopup, 250, session->GetTrinityString(LANG_POPUP_REMOVE_ONE), GetSlotName(uiAction, session));
-                    player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, session->GetTrinityString(LANG_OPTION_REMOVE_ONE), EQUIPMENT_SLOT_END+3, uiAction, removeOnePopup, 0, false);
-                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TALK, session->GetTrinityString(LANG_OPTION_BACK), EQUIPMENT_SLOT_END+1, 0);
+                    snprintf(removeOnePopup, 250, session->GetArkCoreString(LANG_POPUP_REMOVE_ONE), GetSlotName(uiAction, session));
+                    player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, session->GetArkCoreString(LANG_OPTION_REMOVE_ONE), EQUIPMENT_SLOT_END+3, uiAction, removeOnePopup, 0, false);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TALK, session->GetArkCoreString(LANG_OPTION_BACK), EQUIPMENT_SLOT_END+1, 0);
                     player->SEND_GOSSIP_MENU(DEFAULT_GOSSIP_MESSAGE, creature->GetGUID());
                 }
                 else
@@ -236,11 +236,11 @@ public:
                 }
                 if (removed)
                 {
-                    session->SendAreaTriggerMessage(session->GetTrinityString(LANG_REM_TRANSMOGRIFICATIONS_ITEMS));
+                    session->SendAreaTriggerMessage(session->GetArkCoreString(LANG_REM_TRANSMOGRIFICATIONS_ITEMS));
                     player->PlayDirectSound(3337);
                 }
                 else
-                    session->SendNotification(session->GetTrinityString(LANG_ERR_NO_TRANSMOGRIFICATIONS));
+                    session->SendNotification(session->GetArkCoreString(LANG_ERR_NO_TRANSMOGRIFICATIONS));
                 OnGossipHello(player, creature);
             } break;
         case EQUIPMENT_SLOT_END+3: // Remove Transmogrification from single item
@@ -249,11 +249,11 @@ public:
                 {
                     if (Transmogrification::DeleteFakeEntry(newItem))
                     {
-                        session->SendAreaTriggerMessage(session->GetTrinityString(LANG_REM_TRANSMOGRIFICATION_ITEM), GetSlotName(uiAction, session));
+                        session->SendAreaTriggerMessage(session->GetArkCoreString(LANG_REM_TRANSMOGRIFICATION_ITEM), GetSlotName(uiAction, session));
                         player->PlayDirectSound(3337);
                     }
                     else
-                        session->SendNotification(session->GetTrinityString(LANG_ERR_NO_TRANSMOGRIFICATION), GetSlotName(uiAction, session));
+                        session->SendNotification(session->GetArkCoreString(LANG_ERR_NO_TRANSMOGRIFICATION), GetSlotName(uiAction, session));
                 }
                 OnGossipSelect(player, creature, EQUIPMENT_SLOT_END, uiAction);
             } break;
@@ -280,19 +280,19 @@ public:
                                 newItem->SetNotRefundable(player);
                                 newItem->SetBinding(true);
                                 player->PlayDirectSound(3337);
-                                session->SendAreaTriggerMessage(session->GetTrinityString(LANG_ITEM_TRANSMOGRIFIED), GetSlotName(sender, session));
+                                session->SendAreaTriggerMessage(session->GetArkCoreString(LANG_ITEM_TRANSMOGRIFIED), GetSlotName(sender, session));
                             }
                             else
-                                session->SendNotification(session->GetTrinityString(LANG_ERR_NO_ITEM_SUITABLE));
+                                session->SendNotification(session->GetArkCoreString(LANG_ERR_NO_ITEM_SUITABLE));
                         }
                         else
-                            session->SendNotification(session->GetTrinityString(LANG_ERR_NO_ITEM_EXISTS));
+                            session->SendNotification(session->GetArkCoreString(LANG_ERR_NO_ITEM_EXISTS));
                     }
                     else
-                        session->SendNotification(session->GetTrinityString(LANG_ERR_EQUIP_SLOT_EMPTY));
+                        session->SendNotification(session->GetArkCoreString(LANG_ERR_EQUIP_SLOT_EMPTY));
                 }
                 else
-                    session->SendNotification(session->GetTrinityString(LANG_ERR_NO_TOKEN), GetItemName(sObjectMgr->GetItemTemplate(sTransmogrification->GetTokenEntry()), session).c_str());
+                    session->SendNotification(session->GetArkCoreString(LANG_ERR_NO_TOKEN), GetItemName(sObjectMgr->GetItemTemplate(sTransmogrification->GetTokenEntry()), session).c_str());
                 _items[lowGUID].clear();
                 OnGossipSelect(player, creature, EQUIPMENT_SLOT_END, sender);
             } break;
@@ -307,20 +307,20 @@ private:
     {
         switch (slot)
         {
-        case EQUIPMENT_SLOT_HEAD      : return session->GetTrinityString(LANG_SLOT_NAME_HEAD);
-        case EQUIPMENT_SLOT_SHOULDERS : return session->GetTrinityString(LANG_SLOT_NAME_SHOULDERS);
-        case EQUIPMENT_SLOT_BODY      : return session->GetTrinityString(LANG_SLOT_NAME_BODY);
-        case EQUIPMENT_SLOT_CHEST     : return session->GetTrinityString(LANG_SLOT_NAME_CHEST);
-        case EQUIPMENT_SLOT_WAIST     : return session->GetTrinityString(LANG_SLOT_NAME_WAIST);
-        case EQUIPMENT_SLOT_LEGS      : return session->GetTrinityString(LANG_SLOT_NAME_LEGS);
-        case EQUIPMENT_SLOT_FEET      : return session->GetTrinityString(LANG_SLOT_NAME_FEET);
-        case EQUIPMENT_SLOT_WRISTS    : return session->GetTrinityString(LANG_SLOT_NAME_WRISTS);
-        case EQUIPMENT_SLOT_HANDS     : return session->GetTrinityString(LANG_SLOT_NAME_HANDS);
-        case EQUIPMENT_SLOT_BACK      : return session->GetTrinityString(LANG_SLOT_NAME_BACK);
-        case EQUIPMENT_SLOT_MAINHAND  : return session->GetTrinityString(LANG_SLOT_NAME_MAINHAND);
-        case EQUIPMENT_SLOT_OFFHAND   : return session->GetTrinityString(LANG_SLOT_NAME_OFFHAND);
-        case EQUIPMENT_SLOT_RANGED    : return session->GetTrinityString(LANG_SLOT_NAME_RANGED);
-        case EQUIPMENT_SLOT_TABARD    : return session->GetTrinityString(LANG_SLOT_NAME_TABARD);
+        case EQUIPMENT_SLOT_HEAD      : return session->GetArkCoreString(LANG_SLOT_NAME_HEAD);
+        case EQUIPMENT_SLOT_SHOULDERS : return session->GetArkCoreString(LANG_SLOT_NAME_SHOULDERS);
+        case EQUIPMENT_SLOT_BODY      : return session->GetArkCoreString(LANG_SLOT_NAME_BODY);
+        case EQUIPMENT_SLOT_CHEST     : return session->GetArkCoreString(LANG_SLOT_NAME_CHEST);
+        case EQUIPMENT_SLOT_WAIST     : return session->GetArkCoreString(LANG_SLOT_NAME_WAIST);
+        case EQUIPMENT_SLOT_LEGS      : return session->GetArkCoreString(LANG_SLOT_NAME_LEGS);
+        case EQUIPMENT_SLOT_FEET      : return session->GetArkCoreString(LANG_SLOT_NAME_FEET);
+        case EQUIPMENT_SLOT_WRISTS    : return session->GetArkCoreString(LANG_SLOT_NAME_WRISTS);
+        case EQUIPMENT_SLOT_HANDS     : return session->GetArkCoreString(LANG_SLOT_NAME_HANDS);
+        case EQUIPMENT_SLOT_BACK      : return session->GetArkCoreString(LANG_SLOT_NAME_BACK);
+        case EQUIPMENT_SLOT_MAINHAND  : return session->GetArkCoreString(LANG_SLOT_NAME_MAINHAND);
+        case EQUIPMENT_SLOT_OFFHAND   : return session->GetArkCoreString(LANG_SLOT_NAME_OFFHAND);
+        case EQUIPMENT_SLOT_RANGED    : return session->GetArkCoreString(LANG_SLOT_NAME_RANGED);
+        case EQUIPMENT_SLOT_TABARD    : return session->GetArkCoreString(LANG_SLOT_NAME_TABARD);
         default: return NULL;
         }
     }
