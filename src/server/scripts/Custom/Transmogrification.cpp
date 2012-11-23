@@ -76,25 +76,25 @@ void Transmogrification::SetFakeEntry(Item* item, uint32 entry)
 uint32 Transmogrification::SuitableForTransmogrification(Player* player, Item* oldItem, Item* newItem)
 {
     // not possibly the best structure here, but atleast I got my head around this
-    if (!sTransmogrification->AllowedQuality(newItem->GetTemplate()->Quality))
+    if (!sTransmogrification->AllowedQuality(newItem->GetProto()->Quality))
         return ERR_FAKE_NEW_BAD_QUALITY;
-    if (!sTransmogrification->AllowedQuality(oldItem->GetTemplate()->Quality))
+    if (!sTransmogrification->AllowedQuality(oldItem->GetProto()->Quality))
         return ERR_FAKE_OLD_BAD_QUALITY;
 
-    if (oldItem->GetTemplate()->DisplayInfoID == newItem->GetTemplate()->DisplayInfoID)
+    if (oldItem->GetProto()->DisplayInfoID == newItem->GetProto()->DisplayInfoID)
         return ERR_FAKE_SAME_DISPLAY;
     if (GetFakeEntry(oldItem))
-        if (const ItemTemplate* fakeItemTemplate = sObjectMgr->GetItemTemplate(GetFakeEntry(oldItem)))
-            if (fakeItemTemplate->DisplayInfoID == newItem->GetTemplate()->DisplayInfoID)
+        if (const ItemPrototype* fakeItemTemplate = sObjectMgr->GetItemPrototype(GetFakeEntry(oldItem)))
+            if (fakeItemTemplate->DisplayInfoID == newItem->GetProto()->DisplayInfoID)
                 return ERR_FAKE_SAME_DISPLAY_FAKE;
     if (player->CanUseItem(newItem, false) != EQUIP_ERR_OK)
         return ERR_FAKE_CANT_USE;
-    uint32 newClass = newItem->GetTemplate()->Class;
-    uint32 oldClass = oldItem->GetTemplate()->Class;
-    uint32 newSubClass = newItem->GetTemplate()->SubClass;
-    uint32 oldSubClass = oldItem->GetTemplate()->SubClass;
-    uint32 newInventorytype = newItem->GetTemplate()->InventoryType;
-    uint32 oldInventorytype = oldItem->GetTemplate()->InventoryType;
+    uint32 newClass = newItem->GetProto()->Class;
+    uint32 oldClass = oldItem->GetProto()->Class;
+    uint32 newSubClass = newItem->GetProto()->SubClass;
+    uint32 oldSubClass = oldItem->GetProto()->SubClass;
+    uint32 newInventorytype = newItem->GetProto()->InventoryType;
+    uint32 oldInventorytype = oldItem->GetProto()->InventoryType;
     if (newClass != oldClass)
         return ERR_FAKE_NOT_SAME_CLASS;
     if (newClass == ITEM_CLASS_WEAPON && newSubClass != ITEM_SUBCLASS_WEAPON_FISHING_POLE && oldSubClass != ITEM_SUBCLASS_WEAPON_FISHING_POLE)
@@ -130,7 +130,7 @@ public:
         {
             if (Item* newItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
             {
-                if (sTransmogrification->AllowedQuality(newItem->GetTemplate()->Quality))
+                if (sTransmogrification->AllowedQuality(newItem->GetProto()->Quality))
                 {
                     if (const char* slotName = GetSlotName(slot, session))
                         player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, slotName, EQUIPMENT_SLOT_END, slot);
@@ -164,7 +164,7 @@ public:
                     }
                     char tokenCost[250] = "\n";
                     if(sTransmogrification->GetRequireToken())
-                        snprintf(tokenCost, 250, "\n\n%u x %s", sTransmogrification->GetTokenAmount(), GetItemName(sObjectMgr->GetItemTemplate(sTransmogrification->GetTokenEntry()), session).c_str());
+                        snprintf(tokenCost, 250, "\n\n%u x %s", sTransmogrification->GetTokenAmount(), GetItemName(sObjectMgr->GetItemPrototype(sTransmogrification->GetTokenEntry()), session).c_str());
 
                     for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
                     {
@@ -172,14 +172,14 @@ public:
                             break;
                         if (Item* newItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
                         {
-                            uint32 display = newItem->GetTemplate()->DisplayInfoID;
+                            uint32 display = newItem->GetProto()->DisplayInfoID;
                             if (Transmogrification::SuitableForTransmogrification(player, oldItem, newItem) == ERR_FAKE_OK)
                             {
                                 if (_items[lowGUID].find(display) == _items[lowGUID].end())
                                 {
                                     limit++;
                                     _items[lowGUID][display] = newItem;
-                                    player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, GetItemName(newItem->GetTemplate(), session), uiAction, display, session->GetArkCoreString(LANG_POPUP_TRANSMOGRIFY)+GetItemName(newItem->GetTemplate(), session)+tokenCost, price, false);
+                                    player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, GetItemName(newItem->GetProto(), session), uiAction, display, session->GetArkCoreString(LANG_POPUP_TRANSMOGRIFY)+GetItemName(newItem->GetProto(), session)+tokenCost, price, false);
                                 }
                             }
                         }
@@ -187,7 +187,7 @@ public:
 
                     for (uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
                     {
-                        if (Bag* bag = player->GetBagByPos(i))
+                        if (Bag* bag = (Bag*) player->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
                         {
                             for (uint32 j = 0; j < bag->GetBagSize(); j++)
                             {
@@ -195,14 +195,14 @@ public:
                                     break;
                                 if (Item* newItem = player->GetItemByPos(i, j))
                                 {
-                                    uint32 display = newItem->GetTemplate()->DisplayInfoID;
+                                    uint32 display = newItem->GetProto()->DisplayInfoID;
                                     if (Transmogrification::SuitableForTransmogrification(player, oldItem, newItem) == ERR_FAKE_OK)
                                     {
                                         if (_items[lowGUID].find(display) == _items[lowGUID].end())
                                         {
                                             limit++;
                                             _items[lowGUID][display] = newItem;
-                                            player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, GetItemName(newItem->GetTemplate(), session), uiAction, display, session->GetArkCoreString(LANG_POPUP_TRANSMOGRIFY)+GetItemName(newItem->GetTemplate(), session)+tokenCost, price, false);
+                                            player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_INTERACT_1, GetItemName(newItem->GetProto(), session), uiAction, display, session->GetArkCoreString(LANG_POPUP_TRANSMOGRIFY)+GetItemName(newItem->GetProto(), session)+tokenCost, price, false);
                                         }
                                     }
                                 }
@@ -292,7 +292,7 @@ public:
                         session->SendNotification(session->GetArkCoreString(LANG_ERR_EQUIP_SLOT_EMPTY));
                 }
                 else
-                    session->SendNotification(session->GetArkCoreString(LANG_ERR_NO_TOKEN), GetItemName(sObjectMgr->GetItemTemplate(sTransmogrification->GetTokenEntry()), session).c_str());
+                    session->SendNotification(session->GetArkCoreString(LANG_ERR_NO_TOKEN), GetItemName(sObjectMgr->GetItemPrototype(sTransmogrification->GetTokenEntry()), session).c_str());
                 _items[lowGUID].clear();
                 OnGossipSelect(player, creature, EQUIPMENT_SLOT_END, sender);
             } break;
@@ -325,7 +325,7 @@ private:
         }
     }
 
-    std::string GetItemName(const ItemTemplate* itemTemplate, WorldSession* session)
+    std::string GetItemName(const ItemPrototype* itemTemplate, WorldSession* session)
     {
         std::string name = itemTemplate->Name1;
         int loc_idx = session->GetSessionDbLocaleIndex();
@@ -337,8 +337,8 @@ private:
 
     uint32 GetFakePrice(Item* item)
     {
-        uint32 sellPrice = item->GetTemplate()->SellPrice;
-        uint32 minPrice = item->GetTemplate()->RequiredLevel * 1176;
+        uint32 sellPrice = item->GetProto()->SellPrice;
+        uint32 minPrice = item->GetProto()->RequiredLevel * 1176;
         if (sellPrice < minPrice)
             sellPrice = minPrice;
         return sellPrice;
@@ -361,14 +361,14 @@ public:
             {
                 uint32 itemGUID = (*result)[0].GetUInt32();
                 uint32 fakeEntry = (*result)[1].GetUInt32();
-                if (sObjectMgr->GetItemTemplate(fakeEntry))
+                if (sObjectMgr->GetItemPrototype(fakeEntry))
                 {
                     dataMap[itemGUID] = playerGUID;
                     entryMap[playerGUID][itemGUID] = fakeEntry;
                 }
                 else
                 {
-                    sLog->outError(LOG_FILTER_SQL, "Item entry (Entry: %u, itemGUID: %u, playerGUID: %u) does not exist, deleting.", fakeEntry, itemGUID, playerGUID);
+                    sLog->outError("Item entry (Entry: %u, itemGUID: %u, playerGUID: %u) does not exist, deleting.", fakeEntry, itemGUID, playerGUID);
                     Transmogrification::DeleteFakeFromDB(itemGUID);
                 }
             } while (result->NextRow());
@@ -408,7 +408,7 @@ public:
 
     void OnStartup()
     {
-        sLog->outInfo(LOG_FILTER_SERVER_LOADING, "Deleting non-existing transmogrification entries...");
+        sLog->outString("Deleting non-existing transmogrification entries...");
         CharacterDatabase.Execute("DELETE FROM custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)");
     }
 };
