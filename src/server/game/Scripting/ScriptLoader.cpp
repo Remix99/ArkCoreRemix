@@ -1367,6 +1367,7 @@ void AddSC_Gossip_CheckCombat();
 void AddSC_Npc_Beastmaster();
 void AddSC_Title_NPC();
 void AddSC_System_OnPVPKill();
+void AddSC_NPC_Transmogrify();
 #endif
 
 void AddCustomScripts ()
@@ -1377,5 +1378,6 @@ void AddCustomScripts ()
     AddSC_Npc_Beastmaster();
     AddSC_Title_NPC();
     AddSC_System_OnPVPKill();
+    AddSC_NPC_Transmogrify();
 #endif
 }

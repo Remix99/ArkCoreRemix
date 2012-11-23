@@ -24,7 +24,7 @@
 
 #include "gamePCH.h"
 #include <ace/Auto_Ptr.h>
-
+#include "../../../scripts/Custom/Transmogrification.h"
 #include "Common.h"
 #include "Item.h"
 #include "ObjectMgr.h"
@@ -612,6 +612,7 @@ bool Item::LoadFromDB (uint32 guid, uint64 owner_guid, Field* fields, uint32 ent
 void Item::DeleteFromDB (SQLTransaction& trans)
 {
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_INSTANCE);
+    Transmogrification::DeleteFakeFromDB(itemGuid); // custom
     stmt->setUInt32(0, GetGUIDLow());
     trans->Append(stmt);
 }
