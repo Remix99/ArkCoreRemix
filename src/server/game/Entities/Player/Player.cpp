@@ -4778,7 +4778,7 @@ bool Player::resetTalents (bool no_cost)
         return false;
     }
 
-    uint32 cost = 0;
+    uint64 cost = 0;
 
     if (!no_cost && !sWorld->getBoolConfig(CONFIG_NO_RESET_TALENT_COST))
     {
@@ -5879,7 +5879,7 @@ uint32 Player::DurabilityRepair (uint16 pos, bool cost, float discountMod, bool 
             }
 
             uint32 dmultiplier = dcost->multiplier[ItemSubClassToDurabilityMultiplierId(ditemProto->Class, ditemProto->SubClass)];
-            uint32 costs = uint32(LostDurability * dmultiplier * double(dQualitymodEntry->quality_mod));
+            uint64 costs = uint32(LostDurability * dmultiplier * double(dQualitymodEntry->quality_mod));
 
             costs = uint32(costs * discountMod * sWorld->getRate(RATE_REPAIRCOST));
 
@@ -13009,7 +13009,7 @@ void Player::SetVisibleItemSlot (uint8 slot, Item *pItem)
     {
         // custom	
         if (Transmogrification::GetFakeEntry(pItem))	
-        SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), Transmogrification::GetFakeEntry(pItem));	
+        SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), Transmogrification::GetFakeEntry(pItem));
         else
         SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), pItem->GetEntry());
         SetUInt16Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 0, pItem->GetEnchantmentId(PERM_ENCHANTMENT_SLOT));
@@ -15100,7 +15100,7 @@ void Player::OnGossipSelect (WorldObject* pSource, uint32 gossipListId, uint32 m
 
     GossipMenuItemData pMenuData = gossipmenu.GetItemData(gossipListId);
 
-    uint32 cost = gossipmenu.GetItem(gossipListId).m_gBoxMoney;
+    uint64 cost = gossipmenu.GetItem(gossipListId).m_gBoxMoney;
     if (!HasEnoughMoney(cost))
     {
         SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
@@ -21446,14 +21446,13 @@ inline bool Player::_StoreOrEquipNewItem (uint32 vendorslot, uint32 item, uint8 
 }
 
 // Return true is the bought item has a max count to force refresh of window by caller
-bool Player::BuyItemFromVendorSlot (uint64 vendorguid, uint32 vendorslot, uint32 item, uint8 count, uint8 bag, uint8 slot)
+bool Player::BuyItemFromVendorSlot(uint64 vendorguid, uint32 vendorslot, uint32 item, uint8 count, uint8 bag, uint8 slot)
 {
     // cheating attempt
-    if (count < 1)
-        count = 1;
+    if (count < 1) count = 1;
 
     // cheating attempt
-    if (slot > MAX_BAG_SIZE && slot != NULL_SLOT)
+    if (slot > MAX_BAG_SIZE && slot !=NULL_SLOT)
         return false;
 
     if (!isAlive())
@@ -21462,14 +21461,14 @@ bool Player::BuyItemFromVendorSlot (uint64 vendorguid, uint32 vendorslot, uint32
     ItemPrototype const *pProto = ObjectMgr::GetItemPrototype(item);
     if (!pProto)
     {
-        SendBuyError(BUY_ERR_CANT_FIND_ITEM, NULL, item, 0);
+        SendBuyError(BUY_ERR_ITEM_ALREADY_SOLD, NULL, item, 0);
         return false;
     }
 
     Creature *pCreature = GetNPCIfCanInteractWith(vendorguid, UNIT_NPC_FLAG_VENDOR);
     if (!pCreature)
     {
-        sLog->outDebug(LOG_FILTER_NETWORKIO, "World: BuyItemFromVendor - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(vendorguid)));
+        sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: BuyItemFromVendor - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(vendorguid)));
         SendBuyError(BUY_ERR_DISTANCE_TOO_FAR, NULL, item, 0);
         return false;
     }
@@ -21477,13 +21476,13 @@ bool Player::BuyItemFromVendorSlot (uint64 vendorguid, uint32 vendorslot, uint32
     VendorItemData const* vItems = pCreature->GetVendorItems();
     if (!vItems || vItems->Empty())
     {
-        SendBuyError(BUY_ERR_CANT_FIND_ITEM, pCreature, item, 0);
+        SendBuyError(BUY_ERR_ITEM_ALREADY_SOLD, pCreature, item, 0);
         return false;
     }
 
     if (vendorslot >= vItems->GetItemCount())
     {
-        SendBuyError(BUY_ERR_CANT_FIND_ITEM, pCreature, item, 0);
+        SendBuyError(BUY_ERR_ITEM_ALREADY_SOLD, pCreature, item, 0);
         return false;
     }
 
@@ -21491,7 +21490,7 @@ bool Player::BuyItemFromVendorSlot (uint64 vendorguid, uint32 vendorslot, uint32
     // store diff item (cheating)
     if (!crItem || crItem->item != item)
     {
-        SendBuyError(BUY_ERR_CANT_FIND_ITEM, pCreature, item, 0);
+        SendBuyError(BUY_ERR_ITEM_ALREADY_SOLD, pCreature, item, 0);
         return false;
     }
 
@@ -21516,6 +21515,13 @@ bool Player::BuyItemFromVendorSlot (uint64 vendorguid, uint32 vendorslot, uint32
 
     if (crItem->ExtendedCost)
     {
+        // Can only buy full stacks for extended cost
+        if (pProto->BuyCount != count)
+        {
+            SendEquipError(EQUIP_ERR_CANT_BUY_QUANTITY, NULL, NULL);
+            return false;
+        }
+		
         ItemExtendedCostEntry const* iece = sItemExtendedCostStore.LookupEntry(crItem->ExtendedCost);
         if (!iece)
         {
@@ -21524,7 +21530,7 @@ bool Player::BuyItemFromVendorSlot (uint64 vendorguid, uint32 vendorslot, uint32
         }
 
         // item base price
-        for (uint8 i = 0; i < MAX_EXTENDED_COST_ITEMS; ++i)
+        for (int i = 0; i < MAX_EXTENDED_COST_ITEMS; ++i)
         {
             if (iece->RequiredItem[i] && !HasItemCount(iece->RequiredItem[i], (iece->RequiredItemCount[i] * count)))
             {
@@ -21568,16 +21574,25 @@ bool Player::BuyItemFromVendorSlot (uint64 vendorguid, uint32 vendorslot, uint32
         }
     }
 
-    uint32 price = crItem->IsGoldRequired(pProto) ? pProto->BuyPrice * count : 0;
+    uint64 price = 0;
+    if (crItem->IsGoldRequired(pProto) && pProto->BuyPrice > 0) //Assume price cannot be negative (do not know why it is int32)
+    {
+        uint32 maxCount = MAX_MONEY_AMOUNT / pProto->BuyPrice;
+        if ((uint32)count > maxCount)
+        {
+            sLog->outError("Player %s tried to buy %u item id %u, causing overflow", GetName(), (uint32)count, pProto->ItemId);
+            count = (uint8)maxCount;
+        }
+        price = pProto->BuyPrice * count; //it should not exceed MAX_MONEY_AMOUNT
 
-    // reputation discount
-    if (price)
+        // reputation discount
         price = uint32(floor(price * GetReputationPriceDiscount(pCreature)));
 
-    if (!HasEnoughMoney(price))
-    {
-        SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, pCreature, item, 0);
-        return false;
+        if (!HasEnoughMoney(price))
+        {
+            SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, pCreature, item, 0);
+            return false;
+        }
     }
 
     if ((bag == NULL_BAG && slot == NULL_SLOT) || IsInventoryPos(bag, slot))
