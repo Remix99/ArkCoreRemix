@@ -159,7 +159,7 @@ class boss_temple_guardian_anhuur : public CreatureScript
                 DoTeleportTo(-640.527f, 334.855f, 78.345f, 1.54f);
                 me->SetOrientation(1.54f);
                 for (uint32 x = 0; x<21; ++x)
-                   me->SummonCreature(NPC_PIT_SNAKE, SpawnPosition[x], TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3000);
+                   //me->SummonCreature(NPC_PIT_SNAKE, SpawnPosition[x], TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3000);
 
                 DoCast(me, SPELL_SHIELD_OF_LIGHT);
                 DoCast(me, SPELL_REVERBERATING_HYMN);
@@ -188,9 +188,9 @@ class boss_temple_guardian_anhuur : public CreatureScript
                 if (pInstance)
                     pInstance->SetData(DATA_TEMPLE_GUARDIAN_ANHUUR_EVENT, DONE);
 
-                GameObject* Bridge = me->FindNearestGameObject(GO_ANHUUR_BRIDGE, 200);
-                if (Bridge)
-                    Bridge->SetGoState(GO_STATE_ACTIVE);
+                //GameObject* Bridge = me->FindNearestGameObject(GO_ANHUUR_BRIDGE, 200);
+                //if (Bridge)
+                    //Bridge->SetGoState(GO_STATE_ACTIVE);
             }
 
             void SummonedCreatureDespawn(Creature* summon)
