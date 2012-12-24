@@ -2326,6 +2326,7 @@ Pet* Player::SummonPet (uint32 entry, float x, float y, float z, float ang, PetT
         pet->SetDuration(duration);
 
     //ObjectAccessor::UpdateObjectVisibility(pet);
+    //map->Add(pet->ToCreature());
 
     return pet;
 }
