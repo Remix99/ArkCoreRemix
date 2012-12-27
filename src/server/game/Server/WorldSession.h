@@ -39,6 +39,9 @@ struct AuctionEntry;
 struct DeclinedName;
 struct MovementInfo;
 
+class CalendarEvent;
+class CalendarInvite;
+class InstanceSave;
 class Creature;
 class Item;
 class Object;
@@ -813,6 +816,17 @@ public:
     void HandleHearthAndResurrect (WorldPacket& recv_data);
     void HandleGuildPartyStateUpdate (WorldPacket& recv_data);
     void HandleInstanceLockResponse (WorldPacket& recvPacket);
+	
+    // Battlefield
+    void SendBfInvitePlayerToWar(uint32 BattleId, uint32 ZoneId, uint64 time);
+    void SendBfInvitePlayerToQueue(uint32 BattleId);
+    void SendBfQueueInviteResponse(uint32 BattleId, uint32 ZoneId);
+    void SendBfEntered(uint32 BattleId);
+    void SendBfLeaveMessage(uint32 BattleId);
+    void HandleBfQueueInviteResponse(WorldPacket& recv_data);
+    void HandleBfJoinQueue(WorldPacket& recv_data);
+    void HandleBfEntryInviteResponse(WorldPacket& recv_data);
+    void HandleBfExitRequest(WorldPacket& recv_data);	
 
     // Looking for Dungeon/Raid
     void HandleLfgSetCommentOpcode (WorldPacket & recv_data);
@@ -906,7 +920,22 @@ public:
     void HandleCalendarEventModeratorStatus (WorldPacket& recv_data);
     void HandleCalendarComplain (WorldPacket& recv_data);
     void HandleCalendarGetNumPending (WorldPacket& recv_data);
+	void HandleCalendarEventSignup(WorldPacket& recvData);
 
+    void SendCalendarEvent(CalendarEvent const& calendarEvent, CalendarSendEventType sendEventType);
+    void SendCalendarEventInvite(CalendarInvite const& invite, bool pending);
+    void SendCalendarEventInviteAlert(CalendarEvent const& calendarEvent, CalendarInvite const& calendarInvite);
+    void SendCalendarEventInviteRemove(CalendarInvite const& invite, uint32 flags);
+    void SendCalendarEventInviteRemoveAlert(CalendarEvent const& calendarEvent, CalendarInviteStatus status);
+    void SendCalendarEventRemovedAlert(CalendarEvent const& calendarEvent);
+    void SendCalendarEventUpdateAlert(CalendarEvent const& calendarEvent, CalendarSendEventType sendEventType);
+    void SendCalendarEventStatus(CalendarEvent const& calendarEvent, CalendarInvite const& invite);
+    void SendCalendarEventModeratorStatusAlert(CalendarInvite const& invite);
+    void SendCalendarCommandResult(CalendarError err, char const* param = NULL);
+    void SendCalendarRaidLockout(InstanceSave const* save, bool add);
+    void SendCalendarRaidLockoutUpdated(InstanceSave const* save);
+    void SendCalendarClearActionPending();
+	
     void HandleSpellClick (WorldPacket& recv_data);
     void HandleMirrrorImageDataRequest (WorldPacket & recv_data);
     void HandleAlterAppearance (WorldPacket& recv_data);
