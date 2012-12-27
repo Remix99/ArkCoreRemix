@@ -24,7 +24,6 @@
 
 #include "gamePCH.h"
 #include <ace/Auto_Ptr.h>
-
 #include "../../../scripts/Custom/Transmogrification.h"
 #include "Common.h"
 #include "Item.h"
@@ -612,8 +611,8 @@ bool Item::LoadFromDB (uint32 guid, uint64 owner_guid, Field* fields, uint32 ent
 
 void Item::DeleteFromDB (SQLTransaction& trans)
 {
-    Transmogrification::DeleteFakeFromDB(GetGUIDLow()); // custom
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_INSTANCE);
+    Transmogrification::DeleteFakeFromDB(itemGuid); // custom
     stmt->setUInt32(0, GetGUIDLow());
     trans->Append(stmt);
 }
@@ -1365,4 +1364,42 @@ bool Item::CheckSoulboundTradeExpire ()
     }
 
     return false;
+}
+
+FakeResult Item::SetFakeDisplay(uint32 iEntry)
+{
+    if (!iEntry)
+    {
+        RemoveFakeDisplay();
+        return FAKE_ERR_OK;
+    }
+
+    ItemPrototype const* myTmpl    = GetProto();
+    ItemPrototype const* otherTmpl = sObjectMgr->GetItemPrototype(iEntry);
+
+    if (!otherTmpl)
+        return FAKE_ERR_CANT_FIND_ITEM;
+
+    if (myTmpl->InventoryType != otherTmpl->InventoryType)
+        return FAKE_ERR_DIFF_SLOTS;
+
+    if (m_fakeDisplayEntry != iEntry)
+    {
+        sObjectMgr->SetFekeItem(GetGUIDLow(), iEntry);
+
+        (!m_fakeDisplayEntry) ? CharacterDatabase.PExecute("INSERT INTO fake_items VALUES (%u, %u)", GetGUIDLow(), iEntry) :
+                                CharacterDatabase.PExecute("UPDATE fake_items SET fakeEntry = %u WHERE guid = %u", iEntry, GetGUIDLow());
+        m_fakeDisplayEntry = iEntry;
+    }
+
+    return FAKE_ERR_OK;
+}
+
+void Item::RemoveFakeDisplay()
+{
+    if (GetFakeDisplayEntry())
+    {
+        m_fakeDisplayEntry = 0;
+        CharacterDatabase.PExecute("DELETE FROM fake_items WHERE guid = %u", GetGUIDLow());
+    }
 }
