@@ -1253,6 +1253,8 @@ bool Player::Create (uint32 guidlow, const std::string& name, uint8 race, uint8 
     }
     SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_REGENERATE_POWER);
     SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);          // fix cast time showed in spell tooltip on client
+    SetFloatValue(PLAYER_FIELD_MOD_HASTE, 1.0f);
+    SetFloatValue(PLAYER_FIELD_MOD_RANGED_HASTE, 1.0f);	
     SetFloatValue(UNIT_FIELD_HOVERHEIGHT, 1.0f);          // default for players in 3.0.3
 
     // -1 is default value
@@ -3560,7 +3562,9 @@ void Player::InitStatsForLevel (bool reapplyMods)
     UpdateSkillsForLevel();
 
     // set default cast time multiplier
-    SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);
+    SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f); //Spell
+    SetFloatValue(PLAYER_FIELD_MOD_HASTE, 1.0f); // Melee
+    SetFloatValue(PLAYER_FIELD_MOD_RANGED_HASTE, 1.0f); // Ranged	
 
     // reset size before reapply auras
     SetFloatValue(OBJECT_FIELD_SCALE_X, 1.0f);
@@ -4965,6 +4969,8 @@ void Player::InitVisibleBits ()
     updateVisualBits.SetBit(UNIT_DYNAMIC_FLAGS);
     updateVisualBits.SetBit(UNIT_CHANNEL_SPELL);
     updateVisualBits.SetBit(UNIT_MOD_CAST_SPEED);
+    updateVisualBits.SetBit(PLAYER_FIELD_MOD_HASTE);
+    updateVisualBits.SetBit(PLAYER_FIELD_MOD_RANGED_HASTE);	
     updateVisualBits.SetBit(UNIT_FIELD_BASE_MANA);
     updateVisualBits.SetBit(UNIT_FIELD_BYTES_2);
     updateVisualBits.SetBit(UNIT_FIELD_HOVERHEIGHT);
@@ -10682,6 +10688,15 @@ Item* Player::GetItemByPos (uint8 bag, uint8 slot) const
     return NULL;
 }
 
+Bag* Player::GetBagByPos(uint8 bag) const
+{
+    if ((bag >= INVENTORY_SLOT_BAG_START && bag < INVENTORY_SLOT_BAG_END)
+        || (bag >= BANK_SLOT_BAG_START && bag < BANK_SLOT_BAG_END))
+        if (Item* item = GetItemByPos(INVENTORY_SLOT_BAG_0, bag))
+            return item->ToBag();
+    return NULL;
+}
+
 Item* Player::GetWeaponForAttack (WeaponAttackType attackType, bool useable /*= false*/) const
 {
     uint8 slot;
@@ -13007,10 +13022,10 @@ void Player::SetVisibleItemSlot (uint8 slot, Item *pItem)
 {
     if (pItem)
     {
-        // custom	
-        if (Transmogrification::GetFakeEntry(pItem))	
+        // custom
+        if (Transmogrification::GetFakeEntry(pItem))
         SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), Transmogrification::GetFakeEntry(pItem));
-        else
+        else	
         SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), pItem->GetEntry());
         SetUInt16Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 0, pItem->GetEnchantmentId(PERM_ENCHANTMENT_SLOT));
         SetUInt16Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 1, pItem->GetEnchantmentId(TEMP_ENCHANTMENT_SLOT));
@@ -13386,6 +13401,46 @@ void Player::DestroyItemCount (uint32 item, uint32 count, bool update, bool uneq
                         pItem->SendUpdateToPlayer(this);
                     pItem->SetState(ITEM_CHANGED, this);
                     return;
+                }
+            }
+        }
+    }
+	
+    // in bank
+    for (uint8 i = BANK_SLOT_ITEM_START; i < BANK_SLOT_ITEM_END; i++)
+    {
+        if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+        {
+            if (pItem && pItem->GetEntry() == item && !pItem->IsInTrade())
+            {
+                if (pItem->GetCount() + remcount <= count)
+                {
+                    remcount += pItem->GetCount();
+                    DestroyItem(INVENTORY_SLOT_BAG_0, i, update);
+                    if (remcount >= count)
+                        return;
+                }
+            }
+        }
+    }
+
+    // in bank bags
+    for (uint8 i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
+    {
+        if (Bag* pBag = (Bag*)GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+        {
+            for (uint32 j = 0; j < pBag->GetBagSize(); j++)
+            {
+                Item* pItem = GetItemByPos(i, j);
+                if (pItem && pItem->GetEntry() == item && !pItem->IsInTrade())
+                {
+                    if (pItem->GetCount() + remcount <= count)
+                    {
+                        remcount += pItem->GetCount();
+                        DestroyItem(i, j, update);
+                        if (remcount >= count)
+                            return;
+                    }
                 }
             }
         }
@@ -15937,11 +15992,11 @@ void Player::RewardQuest (Quest const *pQuest, uint32 reward, Object* questGiver
     m_RewardedQuestsSave[quest_id] = true;
 
     // StoreNewItem, mail reward, etc. save data directly to the database
-    // to prevent exploitable data desynchronisation we save the quest status to the database too	
+    // to prevent exploitable data desynchronisation we save the quest status to the database too
     // (to prevent rewarding this quest another time while rewards were already given out)
     SQLTransaction trans = SQLTransaction(NULL);
     _SaveQuestStatus(trans);
- 
+	
     if (announce)
         SendQuestReward(pQuest, XP, questGiver);
 
@@ -19829,7 +19884,7 @@ void Player::_SaveMail (SQLTransaction& trans)
 void Player::_SaveQuestStatus (SQLTransaction& trans)
 {
 
-    bool isTransaction = !trans.null();	
+    bool isTransaction = !trans.null();
     if (!isTransaction)
         trans = CharacterDatabase.BeginTransaction();
 
@@ -23892,15 +23947,15 @@ bool Player::isUsingLfg ()
     return sLFGMgr->GetState(guid) != LFG_STATE_NONE;
 }
 
-void Player::SetBattlegroundOrBattlefieldRaid(Group* group, int8 subgroup)	
-{	
-    //we must move references from m_group to m_originalGroup	
+void Player::SetBattlegroundOrBattlefieldRaid(Group* group, int8 subgroup)
+{
+    //we must move references from m_group to m_originalGroup
     SetOriginalGroup(GetGroup(), GetSubGroup());
-	
-    m_group.unlink();	
-    m_group.link(group, this);	
+
+    m_group.unlink();
+    m_group.link(group, this);
     m_group.setSubGroup((uint8)subgroup);
-}	
+}
 
 void Player::SetBattlegroundRaid (Group* group, int8 subgroup)
 {
