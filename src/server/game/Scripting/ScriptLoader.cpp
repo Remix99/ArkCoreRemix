@@ -1453,6 +1453,7 @@ void AddSC_Npc_Beastmaster();
 void AddSC_Title_NPC();
 void AddSC_System_OnPVPKill();
 void AddSC_NPC_Transmogrify();
+void AddSC_BountyHunter();
 #endif
 
 void AddCustomScripts ()
@@ -1464,5 +1465,6 @@ void AddCustomScripts ()
     AddSC_Title_NPC();
     AddSC_System_OnPVPKill();
     AddSC_NPC_Transmogrify();
+    AddSC_BountyHunter();
 #endif
 }

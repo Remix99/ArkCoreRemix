@@ -6,6 +6,7 @@ set(scripts_STAT_SRCS
     Custom/Npc_Beastmaster.cpp
     Custom/Title_NPC.cpp
     Custom/pvp_System.cpp
+    Custom/npc_bounty.cpp
 )
 
 message("  -> Prepared: Custom")
