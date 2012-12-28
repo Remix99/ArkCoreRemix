@@ -491,6 +491,7 @@ void Item::SaveToDB (SQLTransaction& trans)
     case ITEM_REMOVED:
     {
         PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_INSTANCE);
+        Transmogrification::DeleteFakeFromDB(GetGUIDLow()); // custom
         stmt->setUInt32(0, guid);
         trans->Append(stmt);
 
@@ -612,7 +613,6 @@ bool Item::LoadFromDB (uint32 guid, uint64 owner_guid, Field* fields, uint32 ent
 void Item::DeleteFromDB (SQLTransaction& trans)
 {
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_INSTANCE);
-    Transmogrification::DeleteFakeFromDB(itemGuid); // custom
     stmt->setUInt32(0, GetGUIDLow());
     trans->Append(stmt);
 }
