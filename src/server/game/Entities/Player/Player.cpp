@@ -13022,9 +13022,10 @@ void Player::SetVisibleItemSlot (uint8 slot, Item *pItem)
 {
     if (pItem)
     {
-        // custom
-        if (Transmogrification::GetFakeEntry(pItem))
-        SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), Transmogrification::GetFakeEntry(pItem));
+        SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), (pItem->GetFakeDisplayEntry()) ? pItem->GetFakeDisplayEntry() : pItem->GetEntry());
+        // custom	
+        if (Transmogrification::GetFakeEntry(pItem))	
+        SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), Transmogrification::GetFakeEntry(pItem));	
         else	
         SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), pItem->GetEntry());
         SetUInt16Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 0, pItem->GetEnchantmentId(PERM_ENCHANTMENT_SLOT));
@@ -23945,16 +23946,6 @@ bool Player::isUsingLfg ()
 {
     uint64 guid = GetGUID();
     return sLFGMgr->GetState(guid) != LFG_STATE_NONE;
-}
-
-void Player::SetBattlegroundOrBattlefieldRaid(Group* group, int8 subgroup)
-{
-    //we must move references from m_group to m_originalGroup
-    SetOriginalGroup(GetGroup(), GetSubGroup());
-
-    m_group.unlink();
-    m_group.link(group, this);
-    m_group.setSubGroup((uint8)subgroup);
 }
 
 void Player::SetBattlegroundRaid (Group* group, int8 subgroup)
