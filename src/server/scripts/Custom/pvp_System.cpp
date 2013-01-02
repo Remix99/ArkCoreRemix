@@ -113,7 +113,7 @@ void OnPVPKill(Player *pKiller, Player *pVictim)
         sprintf(msg, "|cFFff8400[Kill Streak]:|r -RANK-(1) - Beware of |cFFa2cc0f%s|r the Criminal who destroyed |cFFff0000%s|r and is warming up with a 2 person killing spree. Rising to the top!", pKiller->GetName(), pVictim->GetName(), KillStreaks[1]);
         sWorld->SendServerMessage(SERVER_MSG_STRING, msg);
         pKiller->AddItem(ItemReward, AmountOfRewardsOnKillStreak[1]);
-        pKiller->CastSpell(pKiller,11010,true);
+        pKiller->CastSpell(pKiller,24378,true);
         break;
 
         case KillerStreak20:
