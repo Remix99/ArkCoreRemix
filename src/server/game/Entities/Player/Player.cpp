@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2005 - 2012 MaNGOS <http://www.getmangos.com/>
+ * Copyright (C) 2005 - 2013 MaNGOS <http://www.getmangos.com/>
  *
- * Copyright (C) 2008 - 2012 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008 - 2013 Trinity <http://www.trinitycore.org/>
  *
- * Copyright (C) 2010 - 2012 ArkCORE <http://www.arkania.net/>
+ * Copyright (C) 2010 - 2013 ArkCORE <http://www.arkania.net/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2332,7 +2332,7 @@ bool Player::ToggleAFK ()
     // afk player not allowed in battleground
     if (state && InBattleground() && !InArena())
         LeaveBattleground();
-    if (Guild * pGuild = sObjectMgr->GetGuildById(GetGuildId()))
+    if (Guild * pGuild = sGuildMgr->GetGuildById(GetGuildId()))
         pGuild->OnPlayerStatusChange(this, GUILD_MEMBER_FLAG_AFK, state);
 
     return state;
@@ -2344,7 +2344,7 @@ bool Player::ToggleDND ()
 
     bool state = HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_DND);
 
-    if (Guild * pGuild = sObjectMgr->GetGuildById(GetGuildId()))
+    if (Guild * pGuild = sGuildMgr->GetGuildById(GetGuildId()))
         pGuild->OnPlayerStatusChange(this, GUILD_MEMBER_FLAG_DND, state);
     return state;
 }
@@ -3414,7 +3414,7 @@ void Player::GiveLevel (uint8 level)
     if (level == getLevel())
         return;
 
-    if (Guild * pGuild = sObjectMgr->GetGuildById(this->GetGuildId()))
+    if (Guild * pGuild = sGuildMgr->GetGuildById(this->GetGuildId()))
         pGuild->UpdateMemberData(this, GUILD_MEMBER_DATA_LEVEL, level);
 
     sScriptMgr->OnPlayerLevelChanged(this, level);
@@ -5187,7 +5187,7 @@ void Player::DeleteFromDB (uint64 playerguid, uint32 accountId, bool updateRealm
     sObjectAccessor->ConvertCorpseForPlayer(playerguid);
 
     if (uint32 guildId = GetGuildIdFromDB(playerguid))
-        if (Guild * pGuild = sObjectMgr->GetGuildById(guildId))
+        if (Guild * pGuild = sGuildMgr->GetGuildById(guildId))
             pGuild->DeleteMember(guid);
 
     // remove from arena teams
@@ -5900,7 +5900,7 @@ uint32 Player::DurabilityRepair (uint16 pos, bool cost, float discountMod, bool 
                     return TotalCost;
                 }
 
-                Guild *pGuild = sObjectMgr->GetGuildById(GetGuildId());
+                Guild *pGuild = sGuildMgr->GetGuildById(GetGuildId());
                 if (!pGuild)
                     return TotalCost;
 
@@ -7947,7 +7947,7 @@ void Player::UpdateZone (uint32 newZone, uint32 newArea)
 {
     if (m_zoneUpdateId != newZone)
     {
-        if (Guild * pGuild = sObjectMgr->GetGuildById(GetGuildId()))
+        if (Guild * pGuild = sGuildMgr->GetGuildById(GetGuildId()))
             pGuild->UpdateMemberData(this, GUILD_MEMBER_DATA_ZONEID, newZone);
 
         sOutdoorPvPMgr->HandlePlayerLeaveZone(this, m_zoneUpdateId);
@@ -13026,7 +13026,7 @@ void Player::SetVisibleItemSlot (uint8 slot, Item *pItem)
         // custom	
         if (Transmogrification::GetFakeEntry(pItem))	
         SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), Transmogrification::GetFakeEntry(pItem));	
-        else	
+        else
         SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * 2), pItem->GetEntry());
         SetUInt16Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 0, pItem->GetEnchantmentId(PERM_ENCHANTMENT_SLOT));
         SetUInt16Value(PLAYER_VISIBLE_ITEM_1_ENCHANTMENT + (slot * 2), 1, pItem->GetEnchantmentId(TEMP_ENCHANTMENT_SLOT));
@@ -15915,7 +15915,7 @@ void Player::RewardQuest (Quest const *pQuest, uint32 reward, Object* questGiver
     // If the player has a guild, it should gain 1/4 of his experience.
     // Also, player should get 1/450XP as reputation.
     // Despite of him being at max level or not.
-    if (Guild* pGuild = sObjectMgr->GetGuildById(GetGuildId()))
+    if (Guild* pGuild = sGuildMgr->GetGuildById(GetGuildId()))
     {
         uint32 guildXP = XP / 4;
         uint32 guildRep = uint32(guildXP / 450 / 4);
@@ -15992,12 +15992,6 @@ void Player::RewardQuest (Quest const *pQuest, uint32 reward, Object* questGiver
     m_RewardedQuests.insert(quest_id);
     m_RewardedQuestsSave[quest_id] = true;
 
-    // StoreNewItem, mail reward, etc. save data directly to the database
-    // to prevent exploitable data desynchronisation we save the quest status to the database too
-    // (to prevent rewarding this quest another time while rewards were already given out)
-    SQLTransaction trans = SQLTransaction(NULL);
-    _SaveQuestStatus(trans);
-	
     if (announce)
         SendQuestReward(pQuest, XP, questGiver);
 
@@ -19884,11 +19878,6 @@ void Player::_SaveMail (SQLTransaction& trans)
 
 void Player::_SaveQuestStatus (SQLTransaction& trans)
 {
-
-    bool isTransaction = !trans.null();
-    if (!isTransaction)
-        trans = CharacterDatabase.BeginTransaction();
-
     QuestStatusSaveMap::iterator saveItr;
     QuestStatusMap::iterator statusItr;
 
@@ -22477,7 +22466,7 @@ void Player::ModifyMoney (int32 d)
 
             SetGuildMoneyModifier(1);
 
-            if (Guild * pGuild = sObjectMgr->GetGuildById(GetGuildId()))
+            if (Guild * pGuild = sGuildMgr->GetGuildById(GetGuildId()))
             {
                 if (pGuild)
                 {
@@ -25924,7 +25913,7 @@ uint32 Player::GetReputation (uint32 factionentry)
 }
 std::string Player::GetGuildName ()
 {
-    return sObjectMgr->GetGuildById(GetGuildId())->GetName();
+    return sGuildMgr->GetGuildById(GetGuildId())->GetName();
 }
 
 void Player::SendDuelCountdown (uint32 counter)
