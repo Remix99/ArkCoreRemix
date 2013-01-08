@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2010 - 2012 ProjectSkyfire <http://www.projectskyfire.org/>
+ * Copyright (C) 2010 - 2013 ProjectSkyfire <http://www.projectskyfire.org/>
  *
- * Copyright (C) 2011 - 2012 ArkCORE <http://www.arkania.net/>
- * Copyright (C) 2008 - 2012 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2011 - 2013 ArkCORE <http://www.arkania.net/>
+ * Copyright (C) 2008 - 2013 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ void AddSC_player_mage_scripts ();
 void AddSC_example_commandscript ();
 // Custom
 void AddSC_transmogrify_script();
+void AddSC_BountyHunter();
 
 // spells
 void AddSC_deathknight_spell_scripts ();
@@ -59,7 +60,7 @@ void AddSC_achievement_commandscript ();
 //void AddSC_gm_commandscript();
 //void AddSC_go_commandscript();
 //void AddSC_learn_commandscript();
-//void AddSC_modify_commandscript();
+void AddSC_modify_commandscript();
 void AddSC_npc_commandscript ();
 void AddSC_debug_commandscript ();
 void AddSC_reload_commandscript ();
@@ -768,7 +769,7 @@ void AddCommandScripts ()
     //AddSC_gm_commandscript();
     //AddSC_go_commandscript();
     //AddSC_learn_commandscript();
-    //AddSC_modify_commandscript();
+    AddSC_modify_commandscript();
     AddSC_npc_commandscript();
     AddSC_debug_commandscript();
     AddSC_credits_commandscript();

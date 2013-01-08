@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2005 - 2012 MaNGOS <http://www.getmangos.com/>
+ * Copyright (C) 2005 - 2013 MaNGOS <http://www.getmangos.com/>
  *
- * Copyright (C) 2008 - 2012 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008 - 2013 Trinity <http://www.trinitycore.org/>
  *
- * Copyright (C) 2010 - 2012 ProjectSkyfire <http://www.projectskyfire.org/>
+ * Copyright (C) 2010 - 2013 ProjectSkyfire <http://www.projectskyfire.org/>
  *
- * Copyright (C) 2011 - 2012 ArkCORE <http://www.arkania.net/>
+ * Copyright (C) 2011 - 2013 ArkCORE <http://www.arkania.net/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -493,6 +493,7 @@ void Item::SaveToDB (SQLTransaction& trans)
     case ITEM_REMOVED:
     {
         PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_INSTANCE);
+        Transmogrification::DeleteFakeFromDB(GetGUIDLow()); // custom
         stmt->setUInt32(0, guid);
         trans->Append(stmt);
 
@@ -618,7 +619,6 @@ void Item::DeleteFromDB(SQLTransaction& trans)
 {
     sObjectMgr->RemoveFakeItem(GetGUIDLow());
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_INSTANCE);
-    Transmogrification::DeleteFakeFromDB(GetGUIDLow()); // custom
     stmt->setUInt32(0, GetGUIDLow());
     trans->Append(stmt);
 }
@@ -1386,12 +1386,21 @@ FakeResult Item::SetFakeDisplay(uint32 iEntry)
     if (!otherTmpl)
         return FAKE_ERR_CANT_FIND_ITEM;
 
+    // Inventory slot must match
     if (myTmpl->InventoryType != otherTmpl->InventoryType)
-        return FAKE_ERR_DIFF_SLOTS;
+        return FAKE_ERR_DIFF_INVENTORYTYPE;
+    
+    // Valid classes are weapons and armor
+    if (((myTmpl->Class != 2) && (myTmpl->Class != 4)) || ((otherTmpl->Class != 2) && (otherTmpl->Class != 4)))
+        return FAKE_ERR_INVALID_CLASS;
+
+    // Subclasses should match (eg, no axe->mace)
+    if (myTmpl->SubClass != otherTmpl->SubClass)
+        return FAKE_ERR_DIFF_SUBCLASS;
 
     if (m_fakeDisplayEntry != iEntry)
     {
-        sObjectMgr->SetFekeItem(GetGUIDLow(), iEntry);
+        sObjectMgr->SetFakeItem(GetGUIDLow(), iEntry);
 
         (!m_fakeDisplayEntry) ? CharacterDatabase.PExecute("INSERT INTO fake_items VALUES (%u, %u)", GetGUIDLow(), iEntry) :
                                 CharacterDatabase.PExecute("UPDATE fake_items SET fakeEntry = %u WHERE guid = %u", iEntry, GetGUIDLow());

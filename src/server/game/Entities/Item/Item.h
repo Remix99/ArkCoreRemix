@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2005 - 2012 MaNGOS <http://www.getmangos.com/>
+ * Copyright (C) 2005 - 2013 MaNGOS <http://www.getmangos.com/>
  *
- * Copyright (C) 2008 - 2012 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008 - 2013 Trinity <http://www.trinitycore.org/>
  *
- * Copyright (C) 2010 - 2012 ProjectSkyfire <http://www.projectskyfire.org/>
+ * Copyright (C) 2010 - 2013 ProjectSkyfire <http://www.projectskyfire.org/>
  *
- * Copyright (C) 2011 - 2012 ArkCORE <http://www.arkania.net/>
+ * Copyright (C) 2011 - 2013 ArkCORE <http://www.arkania.net/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -160,9 +160,11 @@ enum FakeResult
     FAKE_ERR_CANT_FIND_OWNER,
     FAKE_ERR_CANT_FIND_ITEM,
     FAKE_ERR_WRONG_QUALITY,
-    FAKE_ERR_DIFF_SLOTS,
+    FAKE_ERR_DIFF_INVENTORYTYPE,
     FAKE_ERR_DIFF_CLASS,
     FAKE_ERR_DIFF_RACE,
+    FAKE_ERR_DIFF_SUBCLASS,
+    FAKE_ERR_INVALID_CLASS,
     FAKE_ERR_OK
 };
 
