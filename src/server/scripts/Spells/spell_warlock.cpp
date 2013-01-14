@@ -1,8 +1,8 @@
 /*
-* Copyright (C) 2010 - 2012 ProjectSkyfire	<http://www.projectskyfire.org/>
+* Copyright (C) 2010 - 2013 ProjectSkyfire	<http://www.projectskyfire.org/>
 *
-* Copyright (C) 2011 - 2012 ArkCORE			<http://www.arkania.net/>
-* Copyright (C) 2008 - 2012 TrinityCore		<http://www.trinitycore.org/>
+* Copyright (C) 2011 - 2013 ArkCORE			<http://www.arkania.net/>
+* Copyright (C) 2008 - 2013 TrinityCore		<http://www.trinitycore.org/>
 * Copyright (C) 2005-2009 MaNGOS			<http://getmangos.com/>
 *
 * This program is free software; you can redistribute it and/or modify it
@@ -207,34 +207,35 @@ class spell_warl_drain_soul : public SpellScriptLoader
 };
 
 //80398 Dark Intent
-class spell_warlock_dark_intent : public SpellScriptLoader
+class spell_warlock_dark_intent: public SpellScriptLoader
 {
 public:
-    spell_warlock_dark_intent() : SpellScriptLoader("spell_warlock_dark_intent") { }
+    spell_warlock_dark_intent () : SpellScriptLoader("spell_warlock_dark_intent") { }
 
-    class spell_warlock_dark_intent_SpellScript : public SpellScript
+    class spell_warlock_dark_intent_SpellScript: public SpellScript
     {
         PrepareSpellScript(spell_warlock_dark_intent_SpellScript)
 
-        void HandleScriptEffect(SpellEffIndex effIndex)
+        void HandleScriptEffect (SpellEffIndex effIndex)
         {
             Unit* caster = GetCaster();
             Unit* target = GetHitUnit();
 
-            if(!caster || !target)
+            if (!caster && !target)
                 return;
-
-            caster->CastSpell(target, WARLOCK_DARK_INTENT_EFFECT, true);
-            target->CastSpell(caster, WARLOCK_DARK_INTENT_EFFECT, true);
+            if(!caster->HasAura(WARLOCK_DARK_INTENT_EFFECT))
+                         caster->CastSpell(target, WARLOCK_DARK_INTENT_EFFECT, true);
+            if(!target->HasAura(WARLOCK_DARK_INTENT_EFFECT))
+                         target->CastSpell(caster, WARLOCK_DARK_INTENT_EFFECT, true);
         }
 
-        void Register()
+        void Register ()
         {
             OnEffect += SpellEffectFn(spell_warlock_dark_intent_SpellScript::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_TRIGGER_SPELL);
         }
     };
 
-    SpellScript* GetSpellScript() const
+    SpellScript* GetSpellScript () const
     {
         return new spell_warlock_dark_intent_SpellScript();
     }
